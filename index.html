@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Firebase Mobile Chat + Global</title>
+    <title>Chat with Clear History</title>
     <style>
         :root {
             --primary: #0084ff;
@@ -16,48 +16,48 @@
         }
 
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); }
-
-        #app-container { display: flex; width: 200%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        #app-container { display: flex; width: 200%; height: 100%; transition: transform 0.3s ease; }
         body.in-chat #app-container { transform: translateX(-50%); }
 
-        /* Экран контактов */
+        /* Контакты */
         #contact-screen { width: 50%; height: 100%; background: white; display: flex; flex-direction: column; }
-        .header { padding: 15px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        
+        .header { padding: 15px; border-bottom: 1px solid #ddd; background: #fff; }
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .search-box { display: flex; gap: 5px; }
+        .search-box input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 10px; outline: none; }
+        .search-box button { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 12px; }
+
         #userList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
         #userList li { padding: 15px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
-        
-        /* Стиль для Общего чата */
-        .global-item { background: #f8f7ff; border-left: 5px solid var(--global-color) !important; font-weight: bold; color: var(--global-color); }
-        .global-icon { font-size: 20px; margin-right: 10px; }
+        .badge { background: var(--danger); color: white; font-size: 11px; min-width: 18px; height: 18px; border-radius: 10px; display: none; align-items: center; justify-content: center; margin-right: 8px; font-weight: bold; }
 
-        .admin-tag { background: var(--admin-color); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; margin-left: 5px; }
-        .online-dot { width: 10px; height: 10px; background: #ccc; border-radius: 50%; }
-        .online-dot.active { background: #4caf50; box-shadow: 0 0 5px #4caf50; }
+        /* Индикатор печати */
+        .typing-text { font-size: 11px; color: #4caf50; font-style: italic; display: none; margin-top: 2px; }
 
-        /* Экран чата */
+        /* Чат */
         #chat-screen { width: 50%; height: 100%; background: var(--chat-bg); display: flex; flex-direction: column; }
-        .chat-header { background: white; padding: 10px; display: flex; align-items: center; border-bottom: 1px solid #ddd; z-index: 10; }
-        .back-btn { font-size: 24px; background: none; border: none; color: var(--primary); padding: 0 15px 0 5px; cursor: pointer; }
+        .chat-header { background: white; padding: 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ddd; }
+        .header-left { display: flex; align-items: center; }
+        .back-btn { font-size: 24px; background: none; border: none; color: var(--primary); padding-right: 15px; cursor: pointer; }
+        
+        .clear-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #999; transition: 0.2s; padding: 5px 10px; }
+        .clear-btn:hover { color: var(--danger); }
 
         #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 16px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
+        .msg { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 16px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); position: relative; }
         .msg.my { align-self: flex-end; background: var(--my-msg); border-bottom-right-radius: 2px; }
         .msg.others { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
+
+        .input-panel { background: white; padding: 10px; border-top: 1px solid #ddd; display: flex; gap: 8px; align-items: center; }
+        .input-panel input { flex: 1; border: 1px solid #ddd; padding: 12px; border-radius: 25px; outline: none; }
         
-        /* Подпись имени в общем чате */
-        .sender-name { font-size: 11px; color: #888; margin-bottom: 4px; font-weight: bold; }
+        .icon-btn { width: 45px; height: 45px; border-radius: 50%; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
+        .send-btn { background: var(--primary); }
+        .mic-btn { background: #34495e; }
+        .mic-btn.recording { background: var(--danger); animation: pulse 1.5s infinite; }
 
-        .ticks { font-size: 10px; margin-left: 5px; color: #999; float: right; margin-top: 5px; }
-        .ticks.seen { color: #34b7f1; }
-        .chat-img { max-width: 100%; border-radius: 10px; display: block; margin-top: 5px; }
-
-        .input-panel { background: white; padding: 10px; border-top: 1px solid #ddd; }
-        .input-row { display: flex; gap: 10px; align-items: center; }
-        input { flex: 1; border: 1px solid #ddd; padding: 12px 18px; border-radius: 25px; outline: none; font-size: 16px; background: #f0f2f5; }
-        .send-btn { width: 45px; height: 45px; border-radius: 50%; background: var(--primary); border: none; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-
-        .reset-btn { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        audio { max-width: 100%; height: 35px; margin-top: 5px; }
 
         @media (min-width: 768px) {
             #app-container { width: 100%; transform: none !important; }
@@ -72,34 +72,38 @@
 <div id="app-container">
     <div id="contact-screen">
         <div class="header">
-            <span>Чаты</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span id="myIdDisplay" style="font-size: 11px; color: #999;"></span>
-                <button id="adminResetBtn" class="reset-btn" style="display:none;" onclick="fullReset()">СБРОС</button>
+            <div class="top-row">
+                <span id="myIdDisplay" style="font-size: 12px; color: #999;"></span>
+                <span id="adminRestart" style="display:none; color:red; cursor:pointer;" onclick="fullReset()">↻</span>
+            </div>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Имя...">
+                <button onclick="searchUser()">🔍</button>
             </div>
         </div>
-        <ul id="userList">
-            </ul>
+        <ul id="userList"></ul>
     </div>
 
     <div id="chat-screen">
         <div class="chat-header">
-            <button class="back-btn" onclick="closeChat()">❮</button>
-            <div id="chatTitle" style="font-weight: bold;"></div>
+            <div class="header-left">
+                <button class="back-btn" onclick="closeChat()">❮</button>
+                <div id="chatTitle" style="font-weight: bold; display: flex; align-items: center;"></div>
+            </div>
+            <button id="clearChatBtn" class="clear-btn" onclick="clearCurrentChat()" title="Очистить чат">🗑️</button>
         </div>
         <div id="messages"></div>
         <div class="input-panel">
-            <div class="input-row">
-                <input type="text" id="msgInput" placeholder="Сообщение..." disabled onkeypress="if(event.key === 'Enter') sendMessage()">
-                <button onclick="sendMessage()" id="sendBtn" class="send-btn" disabled>➤</button>
-            </div>
+            <button id="micBtn" class="icon-btn mic-btn">🎤</button>
+            <input type="text" id="msgInput" placeholder="Сообщение..." oninput="handleTyping()" onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button onclick="sendMessage()" class="icon-btn send-btn">➤</button>
         </div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, onChildChanged, set, onValue, onDisconnect, serverTimestamp, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded, set, onValue, onDisconnect, serverTimestamp, update, get, child, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAbulx85P1UVmdN7WeP1v4yZOxAxLT4-5E",
@@ -118,99 +122,171 @@
     let myName = localStorage.getItem('chat_user') || prompt("Ваше имя:") || "User" + Math.floor(Math.random()*100);
     localStorage.setItem('chat_user', myName);
 
-    const formatName = (name) => name === ADMIN_CODE ? `Админ <span class="admin-tag">Staff</span>` : name;
-    document.getElementById('myIdDisplay').innerHTML = formatName(myName);
-    if (myName === ADMIN_CODE) document.getElementById('adminResetBtn').style.display = 'block';
+    const isAdmin = (myName === ADMIN_CODE);
+    const foundUsers = new Set(JSON.parse(localStorage.getItem('found_users') || "[]"));
+
+    document.getElementById('myIdDisplay').innerHTML = "Вы: " + (isAdmin ? "Админ" : myName);
+    if (isAdmin) document.getElementById('adminRestart').style.display = 'inline-block';
 
     const myStatusRef = ref(db, 'status/' + myName);
-    set(myStatusRef, { online: true, ts: serverTimestamp() });
-    onDisconnect(myStatusRef).set({ online: false, ts: serverTimestamp() });
+    set(myStatusRef, { online: true, typing: false, ts: serverTimestamp() });
+    onDisconnect(myStatusRef).set({ online: false, typing: false, ts: serverTimestamp() });
 
     let currentChatId = null;
+    let targetUser = null; 
     let isGlobal = false;
+    let mediaRecorder;
+    let audioChunks = [];
+    let typingTimeout;
 
-    // Отрисовка списка чатов
-    onValue(ref(db, 'status'), (snap) => {
-        const list = document.getElementById('userList');
-        list.innerHTML = `<li class="global-item" onclick="openChat('GLOBAL_CHAT', true)">
-            <span><span class="global-icon">📢</span> Общий чат</span>
-            <div class="online-dot active"></div>
-        </li>`;
-        
-        snap.forEach(child => {
-            if (child.key !== myName) {
-                const li = document.createElement('li');
-                li.innerHTML = `<span>${formatName(child.key)}</span> <div class="online-dot ${child.val().online ? 'active' : ''}"></div>`;
-                li.onclick = () => openChat(child.key, false);
-                list.appendChild(li);
-            }
-        });
+    window.handleTyping = () => {
+        set(ref(db, `status/${myName}/typing`), true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            set(ref(db, `status/${myName}/typing`), false);
+        }, 2000);
+    };
+
+    const micBtn = document.getElementById('micBtn');
+    micBtn.addEventListener('click', async () => {
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const reader = new FileReader();
+                reader.readAsDataURL(new Blob(audioChunks, { type: 'audio/webm' }));
+                reader.onloadend = () => sendVoice(reader.result);
+                stream.getTracks().forEach(t => t.stop());
+            };
+            mediaRecorder.start();
+            micBtn.classList.add('recording');
+            micBtn.textContent = '⏹️';
+        } else {
+            mediaRecorder.stop();
+            micBtn.classList.remove('recording');
+            micBtn.textContent = '🎤';
+        }
     });
 
-    window.openChat = (target, globalMode) => {
-        isGlobal = globalMode;
-        currentChatId = isGlobal ? 'GLOBAL_CHAT' : [myName, target].sort().join("_");
-        document.getElementById('chatTitle').innerHTML = isGlobal ? "📢 Общий чат" : formatName(target);
-        document.getElementById('msgInput').disabled = false;
-        document.getElementById('sendBtn').disabled = false;
-        document.body.classList.add('in-chat');
-        
-        const msgDiv = document.getElementById('messages');
-        msgDiv.innerHTML = "";
+    function sendVoice(base64) {
+        const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
+        push(ref(db, path), { sender: myName, voice: base64, ts: serverTimestamp() });
+    }
 
-        const chatPath = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
-        onChildAdded(ref(db, chatPath), (snap) => {
-            drawMsg(snap.key, snap.val());
-            if (!isGlobal && snap.val().sender !== myName) {
-                update(ref(db, chatPath + '/' + snap.key), { seen: true });
+    function renderUserList(statuses) {
+        const list = document.getElementById('userList');
+        list.innerHTML = `<li onclick="openChat('GLOBAL_CHAT', true)" style="background:#f8f7ff"><div>📢 Общий чат</div><div class="online-dot active"></div></li>`;
+        for (const user in statuses) {
+            if (user === myName) continue;
+            if (isAdmin || foundUsers.has(user)) {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <div style="display:flex; align-items:center;">
+                            <span class="badge" id="badge-${user}">0</span>
+                            <span>${user === ADMIN_CODE ? 'Админ' : user}</span>
+                        </div>
+                        <div class="typing-text" id="typing-${user}">печатает...</div>
+                    </div>
+                    <div class="online-dot ${statuses[user].online ? 'active' : ''}"></div>`;
+                li.onclick = () => openChat(user, false);
+                list.appendChild(li);
+                
+                const tInfo = document.getElementById(`typing-${user}`);
+                if (tInfo) tInfo.style.display = statuses[user].typing ? 'block' : 'none';
+                
+                if (targetUser === user) {
+                    const chatTitle = document.getElementById('chatTitle');
+                    const existingTyping = chatTitle.querySelector('.typing-text-header');
+                    if (statuses[user].typing) {
+                        if (!existingTyping) chatTitle.innerHTML += ` <span class="typing-text-header" style="color:#4caf50; font-style:italic; font-size:12px; margin-left:8px;">печатает...</span>`;
+                    } else if (existingTyping) {
+                        existingTyping.remove();
+                    }
+                }
+                watchUnread(user);
             }
+        }
+    }
+
+    onValue(ref(db, 'status'), snap => renderUserList(snap.val() || {}));
+
+    window.searchUser = async (t) => {
+        const q = t || document.getElementById('searchInput').value.trim();
+        if (!q || q === myName) return;
+        const s = await get(child(ref(db), `status/${q}`));
+        if (s.exists()) {
+            foundUsers.add(q);
+            localStorage.setItem('found_users', JSON.stringify([...foundUsers]));
+            if (t) openChat(q, false);
+        }
+    };
+
+    window.openChat = (target, global) => {
+        isGlobal = global;
+        targetUser = global ? null : target;
+        currentChatId = isGlobal ? 'GLOBAL_CHAT' : [myName, target].sort().join("_");
+        document.getElementById('chatTitle').textContent = isGlobal ? "📢 Общий чат" : target;
+        document.body.classList.add('in-chat');
+        document.getElementById('messages').innerHTML = "";
+        
+        // Обычным пользователям скрываем корзину в Общем чате
+        document.getElementById('clearChatBtn').style.display = (isGlobal && !isAdmin) ? "none" : "block";
+
+        const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
+        onValue(ref(db, path), (snapshot) => {
+            document.getElementById('messages').innerHTML = ""; // Очищаем для перерисовки при удалении
+            snapshot.forEach((childSnap) => {
+                drawMsg(childSnap.key, childSnap.val());
+                if (!isGlobal && childSnap.val().sender !== myName) update(ref(db, path + '/' + childSnap.key), { seen: true });
+            });
         });
     };
 
-    window.closeChat = () => document.body.classList.remove('in-chat');
-
-    window.sendMessage = () => {
-        const input = document.getElementById('msgInput');
-        if (!input.value.trim()) return;
-
-        const chatPath = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
-        push(ref(db, chatPath), {
-            sender: myName,
-            text: input.value,
-            seen: false,
-            ts: serverTimestamp()
-        });
-        input.value = "";
+    // ФУНКЦИЯ ОЧИСТКИ ТЕКУЩЕГО ЧАТА
+    window.clearCurrentChat = async () => {
+        const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
+        const confirmMsg = isGlobal ? "Вы уверены, что хотите удалить ВСЕ сообщения в Общем чате для всех?" : "Очистить историю переписки?";
+        
+        if (confirm(confirmMsg)) {
+            await remove(ref(db, path));
+            document.getElementById('messages').innerHTML = "";
+        }
     };
 
     function drawMsg(id, data) {
-        if (document.getElementById('m-' + id)) return;
-        const msgDiv = document.getElementById('messages');
         const div = document.createElement('div');
         div.id = 'm-' + id;
         div.className = `msg ${data.sender === myName ? 'my' : 'others'}`;
-        
-        // В общем чате показываем имена над сообщениями
-        const nameLabel = (isGlobal && data.sender !== myName) ? `<div class="sender-name">${formatName(data.sender)}</div>` : "";
-        
-        const isImg = data.text.match(/\.(jpg|jpeg|png|gif|webp)$/i) || (data.text.startsWith('http') && data.text.length > 20);
-        const content = isImg ? `<img src="${data.text}" class="chat-img" onerror="this.outerHTML='${data.text}'">` : data.text;
-        const ticks = (!isGlobal && data.sender === myName) ? `<span class="ticks ${data.seen ? 'seen' : ''}">✔✔</span>` : '';
-        
-        div.innerHTML = `${nameLabel}<div>${content}</div>${ticks}`;
-        msgDiv.appendChild(div);
-        msgDiv.scrollTop = msgDiv.scrollHeight;
+        let content = data.voice ? `<audio controls src="${data.voice}"></audio>` : `<div>${data.text}</div>`;
+        div.innerHTML = content;
+        document.getElementById('messages').appendChild(div);
+        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
     }
 
-    window.fullReset = async () => {
-        if (confirm("Сбросить всю систему?")) {
-            await set(ref(db, 'status'), null);
-            await set(ref(db, 'private_messages'), null);
-            await set(ref(db, 'global_messages'), null);
-            localStorage.clear();
-            location.reload();
-        }
+    window.sendMessage = () => {
+        const val = document.getElementById('msgInput').value.trim();
+        if (!val) return;
+        set(ref(db, `status/${myName}/typing`), false);
+        const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
+        push(ref(db, path), { sender: myName, text: val, seen: false, ts: serverTimestamp() });
+        document.getElementById('msgInput').value = "";
     };
+
+    function watchUnread(sender) {
+        const chatId = [myName, sender].sort().join("_");
+        onValue(ref(db, 'private_messages/' + chatId), snap => {
+            let count = 0;
+            snap.forEach(m => { if(m.val().sender === sender && !m.val().seen) count++; });
+            const b = document.getElementById(`badge-${sender}`);
+            if(b) { b.textContent = count; b.style.display = count > 0 ? 'flex' : 'none'; }
+        });
+    }
+
+    window.closeChat = () => { targetUser = null; document.body.classList.remove('in-chat'); };
+    window.fullReset = async () => { if(confirm("Сброс?")) { await set(ref(db), null); localStorage.clear(); location.reload(); } };
 </script>
 </body>
 </html>
