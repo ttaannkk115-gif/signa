@@ -2,159 +2,179 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Universe Elite Pro</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
-    
+    <title>Ultimate Private Chat</title>
     <style>
-        :root { --main: #0088cc; --bg: #f0f2f5; --text: #000; --msg-mine: #dcf8c6; --msg-others: #fff; }
-        body.dark-mode { --bg: #0b141a; --text: #fff; --msg-mine: #005c4b; --msg-others: #202c33; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { background: var(--bg); color: var(--text); display: flex; justify-content: center; height: 100vh; transition: 0.3s; }
-        .container { width: 100%; max-width: 500px; background: #fff; height: 100vh; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-        body.dark-mode .container { background: #111b21; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; }
+        #sidebar { width: 280px; background: #fff; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; font-weight: bold; background: #f8f9fa; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;}
+        
+        #userList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        #userList li { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+        #userList li:hover { background: #f0f7ff; }
+        
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+        .status-dot.online { background: #4caf50; box-shadow: 0 0 5px #4caf50; }
 
-        /* Вход */
-        #login-screen { padding: 40px; display: flex; flex-direction: column; gap: 15px; height: 100%; justify-content: center; text-align: center; }
-        input { padding: 12px; border-radius: 10px; border: 1px solid #ccc; outline: none; }
-        .btn { padding: 12px; background: var(--main); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        #chat-container { flex: 1; display: flex; flex-direction: column; }
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: #e5ddd5; }
+        
+        .msg { max-width: 70%; padding: 8px 12px; border-radius: 12px; font-size: 14px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .msg.my { align-self: flex-end; background: #dcf8c6; }
+        .msg.others { align-self: flex-start; background: #fff; }
+        
+        .status-tick { font-size: 10px; margin-left: 5px; color: #999; float: right; margin-top: 5px; }
+        .status-tick.seen { color: #34b7f1; }
+        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
 
-        /* Чат */
-        header { background: #ededed; padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; }
-        body.dark-mode header { background: #202c33; }
-        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #e5ddd5; }
-        body.dark-mode #messages { background: #0b141a; }
-        .msg { padding: 8px 12px; border-radius: 10px; max-width: 80%; position: relative; background: var(--msg-others); box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
-        .msg.mine { align-self: flex-end; background: var(--msg-mine); }
-        .input-bar { padding: 10px; background: #f0f2f5; display: flex; gap: 8px; }
-        body.dark-mode .input-bar { background: #202c33; }
+        /* Панель смайликов */
+        .emoji-bar { padding: 5px 15px; background: #fff; border-top: 1px solid #eee; display: flex; gap: 10px; font-size: 20px; }
+        .emoji-bar span { cursor: pointer; transition: transform 0.1s; }
+        .emoji-bar span:hover { transform: scale(1.3); }
+
+        .input-area { padding: 10px 15px 15px; background: white; display: flex; gap: 10px; }
+        input { flex: 1; border: 1px solid #ddd; padding: 10px 15px; border-radius: 20px; outline: none; }
+        button { background: #0084ff; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="login-screen">
-        <h1>Universe Elite</h1>
-        <p>Вход по имени (устройство запомнит вас)</p>
-        <input type="text" id="username" placeholder="Введите ваш ник">
-        <button class="btn" onclick="auth()">Войти</button>
+<div id="sidebar">
+    <div class="sidebar-header">Вы: <span id="myName">...</span></div>
+    <ul id="userList"></ul>
+</div>
+
+<div id="chat-container">
+    <div class="sidebar-header" id="chatWith">Выберите собеседника</div>
+    <div id="messages"></div>
+    
+    <div class="emoji-bar" id="emojiBar" style="display:none;">
+        <span onclick="addEmoji('😀')">😀</span>
+        <span onclick="addEmoji('😂')">😂</span>
+        <span onclick="addEmoji('❤️')">❤️</span>
+        <span onclick="addEmoji('👍')">👍</span>
+        <span onclick="addEmoji('🔥')">🔥</span>
+        <span onclick="addEmoji('😎')">😎</span>
+        <span onclick="addEmoji('🤔')">🤔</span>
+        <span onclick="addEmoji('🙌')">🙌</span>
     </div>
 
-    <div id="chat-screen" style="display:none; height:100%; flex-direction:column;">
-        <header>
-            <b id="header-user">Чат</b>
-            <div>
-                <button onclick="toggleDarkMode()" style="background:none; border:none; cursor:pointer; font-size:1.2rem;">🌓</button>
-                <button id="admin-btn" onclick="adminBroadcast()" style="display:none; background:none; border:none; cursor:pointer; margin-left:10px;">📢</button>
-                <button onclick="logout()" style="background:none; border:none; cursor:pointer; margin-left:10px;">🚪</button>
-            </div>
-        </header>
-        <div id="messages"></div>
-        <div class="input-bar">
-            <input type="text" id="msg-input" placeholder="Сообщение..." style="flex:1" onkeypress="if(event.key==='Enter') send()">
-            <button class="btn" onclick="send()">➤</button>
-        </div>
+    <div class="input-area">
+        <input type="text" id="msgInput" placeholder="Сообщение или ссылка на фото..." disabled onkeypress="if(event.key === 'Enter') sendMessage()">
+        <button onclick="sendMessage()" id="sendBtn" disabled>➤</button>
     </div>
 </div>
 
-<script>
+<audio id="notifSound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"></audio>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, onChildChanged, set, onValue, onDisconnect, serverTimestamp, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
     const firebaseConfig = {
-        apiKey: "ТВОЙ_API_KEY",
-        databaseURL: "ТВОЙ_DATABASE_URL",
-        projectId: "ТВОЙ_PROJECT_ID",
-        storageBucket: "ТВОЙ_STORAGE_BUCKET"
+        apiKey: "AIzaSyAbulx85P1UVmdN7WeP1v4yZOxAxLT4-5E",
+        authDomain: "chat-25292.firebaseapp.com",
+        databaseURL: "https://chat-25292-default-rtdb.firebaseio.com",
+        projectId: "chat-25292",
+        storageBucket: "chat-25292.appspot.com",
+        messagingSenderId: "982262580373",
+        appId: "1:982262580373:web:d411a8b651de02afcd879c"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const ADMIN_ID = "6739218"; // Имя админа
-    let currentUser = localStorage.getItem('chat_user');
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    let myName = localStorage.getItem('chat_username') || prompt("Введите имя:") || "User" + Math.floor(Math.random()*100);
+    localStorage.setItem('chat_username', myName);
+    document.getElementById('myName').textContent = myName;
 
-    if (currentUser) loginSuccess(currentUser);
+    // Статус ONLINE
+    const myStatusRef = ref(db, 'status/' + myName);
+    set(myStatusRef, { online: true, lastSeen: serverTimestamp() });
+    onDisconnect(myStatusRef).set({ online: false, lastSeen: serverTimestamp() });
 
-    function auth() {
-        const u = document.getElementById('username').value.trim();
-        if (!u) return alert("Введите имя!");
+    let currentChatId = null;
+    let recipient = null;
+
+    onValue(ref(db, 'status'), (snapshot) => {
+        const userList = document.getElementById('userList');
+        userList.innerHTML = "";
+        snapshot.forEach(child => {
+            const name = child.key;
+            if (name !== myName) {
+                const data = child.val();
+                const li = document.createElement('li');
+                li.innerHTML = `${name} <span class="status-dot ${data.online ? 'online' : ''}"></span>`;
+                li.onclick = () => startChat(name);
+                userList.appendChild(li);
+            }
+        });
+    });
+
+    window.addEmoji = (emoji) => {
+        document.getElementById('msgInput').value += emoji;
+        document.getElementById('msgInput').focus();
+    };
+
+    function startChat(target) {
+        recipient = target;
+        currentChatId = [myName, target].sort().join("_");
+        document.getElementById('chatWith').textContent = "Чат с " + target;
+        document.getElementById('msgInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('emojiBar').style.display = 'flex';
         
-        localStorage.setItem('chat_user', u);
-        loginSuccess(u);
+        const msgDiv = document.getElementById('messages');
+        msgDiv.innerHTML = "";
+
+        const chatRef = ref(db, 'private_messages/' + currentChatId);
+        onChildAdded(chatRef, (data) => {
+            const val = data.val();
+            renderMessage(data.key, val);
+            if (val.sender !== myName) {
+                update(ref(db, `private_messages/${currentChatId}/${data.key}`), { seen: true });
+                document.getElementById('notifSound').play().catch(()=>{}); // Проигрываем звук
+            }
+        });
+
+        onChildChanged(chatRef, (data) => {
+            const el = document.getElementById('msg-' + data.key);
+            if (el && data.val().seen) {
+                const tick = el.querySelector('.status-tick');
+                if (tick) tick.classList.add('seen');
+            }
+        });
     }
 
-    function loginSuccess(u) {
-        currentUser = u;
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('chat-screen').style.display = 'flex';
-        document.getElementById('header-user').innerText = (u === ADMIN_ID) ? "Вы: АДМИНИСТРАТОР" : "Вы: " + u;
+    window.sendMessage = () => {
+        const input = document.getElementById('msgInput');
+        if (!input.value.trim()) return;
+
+        push(ref(db, 'private_messages/' + currentChatId), {
+            sender: myName,
+            text: input.value,
+            seen: false,
+            timestamp: serverTimestamp()
+        });
+        input.value = "";
+    };
+
+    function renderMessage(id, data) {
+        if(document.getElementById('msg-' + id)) return;
+        const msgDiv = document.getElementById('messages');
+        const div = document.createElement('div');
+        div.id = 'msg-' + id;
+        div.className = `msg ${data.sender === myName ? 'my' : 'others'}`;
         
-        // Показываем кнопку рассылки только админу
-        if (u === ADMIN_ID) {
-            document.getElementById('admin-btn').style.display = 'inline-block';
+        const isImage = data.text.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null || (data.text.startsWith('http') && data.text.length > 15);
+        let content = data.text;
+        
+        if (isImage) {
+            content = `<img src="${data.text}" class="chat-img" onerror="this.outerHTML='${data.text}'">`;
         }
 
-        loadMessages();
-        if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
-    }
-
-    function loadMessages() {
-        db.ref('messages').on('value', snap => {
-            const area = document.getElementById('messages');
-            area.innerHTML = '';
-            snap.forEach(m => {
-                const d = m.val();
-                const isMine = d.s === currentUser;
-                const div = document.createElement('div');
-                div.className = `msg ${isMine ? 'mine' : ''}`;
-                div.innerHTML = `<small><b>${d.s === ADMIN_ID ? '⭐ АДМИН' : d.s}</b></small><br>${d.t}`;
-                
-                // Админ или владелец может удалять сообщения долгим нажатием / правым кликом
-                div.oncontextmenu = (e) => {
-                    e.preventDefault();
-                    if (currentUser === ADMIN_ID || isMine) {
-                        if (confirm("Удалить сообщение?")) db.ref('messages/' + m.key).remove();
-                    }
-                };
-                area.appendChild(div);
-            });
-            area.scrollTop = area.scrollHeight;
-        });
-    }
-
-    function send() {
-        const input = document.getElementById('msg-input');
-        const text = input.value.trim();
-        if (!text) return;
-
-        db.ref('messages').push({
-            s: currentUser,
-            t: text,
-            ts: Date.now()
-        });
-        input.value = '';
-    }
-
-    async function adminBroadcast() {
-        const msg = prompt("Введите текст рассылки для всех пользователей:");
-        if (!msg) return;
-
-        // В этом простом чате рассылка идет в общий канал от имени системы
-        db.ref('messages').push({
-            s: "СИСТЕМА",
-            t: "📢 ОБЪЯВЛЕНИЕ: " + msg,
-            ts: Date.now()
-        });
-        alert("Объявление отправлено!");
-    }
-
-    function toggleDarkMode() {
-        document.body.classList.toggle('dark-mode');
-        localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-    }
-
-    function logout() {
-        localStorage.removeItem('chat_user');
-        location.reload();
+        const ticks = data.sender === myName ? `<span class="status-tick ${data.seen ? 'seen' : ''}">✔✔</span>` : '';
+        div.innerHTML = `<div>${content}</div>${ticks}`;
+        msgDiv.appendChild(div);
+        msgDiv.scrollTop = msgDiv.scrollHeight;
     }
 </script>
 </body>
