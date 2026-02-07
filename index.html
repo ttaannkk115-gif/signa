@@ -2,65 +2,90 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Private Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Firebase Chat</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; }
-        #sidebar { width: 280px; background: #fff; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 15px; font-weight: bold; background: #f8f9fa; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;}
+        :root {
+            --primary-color: #0084ff;
+            --bg-color: #f0f2f5;
+            --chat-bg: #e5ddd5;
+        }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg-color); overflow: hidden; }
+
+        /* Контейнер для экранов */
+        #main-wrapper { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
+
+        /* Список контактов */
+        #sidebar { width: 100%; min-width: 100%; background: #fff; display: flex; flex-direction: column; z-index: 10; }
+        .sidebar-header { padding: 15px; font-weight: bold; background: #fff; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; font-size: 18px; }
         
         #userList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        #userList li { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
-        #userList li:hover { background: #f0f7ff; }
-        
+        #userList li { padding: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
-        .status-dot.online { background: #4caf50; box-shadow: 0 0 5px #4caf50; }
+        .status-dot.online { background: #4caf50; }
 
-        #chat-container { flex: 1; display: flex; flex-direction: column; }
-        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: #e5ddd5; }
+        /* Окно чата */
+        #chat-container { width: 100%; min-width: 100%; display: flex; flex-direction: column; background: var(--chat-bg); }
+        .chat-header { padding: 10px 15px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
+        .back-btn { display: block; font-size: 24px; cursor: pointer; color: var(--primary-color); background: none; border: none; padding: 0 10px; }
+
+        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 85%; padding: 8px 12px; border-radius: 15px; font-size: 15px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .msg.my { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
+        .msg.others { align-self: flex-start; background: #fff; border-bottom-left-radius: 2px; }
         
-        .msg { max-width: 70%; padding: 8px 12px; border-radius: 12px; font-size: 14px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .msg.my { align-self: flex-end; background: #dcf8c6; }
-        .msg.others { align-self: flex-start; background: #fff; }
-        
-        .status-tick { font-size: 10px; margin-left: 5px; color: #999; float: right; margin-top: 5px; }
+        .status-tick { font-size: 11px; margin-left: 5px; color: #999; float: right; margin-top: 4px; }
         .status-tick.seen { color: #34b7f1; }
-        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
+        .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; }
 
-        /* Панель смайликов */
-        .emoji-bar { padding: 5px 15px; background: #fff; border-top: 1px solid #eee; display: flex; gap: 10px; font-size: 20px; }
-        .emoji-bar span { cursor: pointer; transition: transform 0.1s; }
-        .emoji-bar span:hover { transform: scale(1.3); }
+        /* Ввод сообщения */
+        .emoji-bar { padding: 8px; background: #fff; display: flex; gap: 15px; overflow-x: auto; border-top: 1px solid #eee; }
+        .input-area { padding: 10px; background: #fff; display: flex; gap: 8px; align-items: center; }
+        input { flex: 1; border: 1px solid #ddd; padding: 12px 15px; border-radius: 25px; outline: none; font-size: 16px; background: #f0f2f5; }
+        .send-btn { background: var(--primary-color); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-        .input-area { padding: 10px 15px 15px; background: white; display: flex; gap: 10px; }
-        input { flex: 1; border: 1px solid #ddd; padding: 10px 15px; border-radius: 20px; outline: none; }
-        button { background: #0084ff; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; }
+        /* Состояния для мобильного переключения */
+        body.in-chat #main-wrapper { transform: translateX(-100%); }
+
+        /* Десктопная версия (если экран широкий) */
+        @media (min-width: 768px) {
+            #sidebar { width: 350px; min-width: 350px; }
+            #chat-container { min-width: auto; }
+            #main-wrapper { transform: none !important; }
+            .back-btn { display: none; }
+        }
     </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <div class="sidebar-header">Вы: <span id="myName">...</span></div>
-    <ul id="userList"></ul>
-</div>
-
-<div id="chat-container">
-    <div class="sidebar-header" id="chatWith">Выберите собеседника</div>
-    <div id="messages"></div>
-    
-    <div class="emoji-bar" id="emojiBar" style="display:none;">
-        <span onclick="addEmoji('😀')">😀</span>
-        <span onclick="addEmoji('😂')">😂</span>
-        <span onclick="addEmoji('❤️')">❤️</span>
-        <span onclick="addEmoji('👍')">👍</span>
-        <span onclick="addEmoji('🔥')">🔥</span>
-        <span onclick="addEmoji('😎')">😎</span>
-        <span onclick="addEmoji('🤔')">🤔</span>
-        <span onclick="addEmoji('🙌')">🙌</span>
+<div id="main-wrapper">
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <span>Чаты</span>
+            <span id="myName" style="font-size: 12px; color: #888;"></span>
+        </div>
+        <ul id="userList"></ul>
     </div>
 
-    <div class="input-area">
-        <input type="text" id="msgInput" placeholder="Сообщение или ссылка на фото..." disabled onkeypress="if(event.key === 'Enter') sendMessage()">
-        <button onclick="sendMessage()" id="sendBtn" disabled>➤</button>
+    <div id="chat-container">
+        <div class="chat-header">
+            <button class="back-btn" onclick="goBack()">❮</button>
+            <div id="chatWith" style="font-weight: bold;">Выберите контакт</div>
+        </div>
+        
+        <div id="messages"></div>
+        
+        <div class="emoji-bar" id="emojiBar" style="display:none;">
+            <span onclick="addEmoji('😀')">😀</span><span onclick="addEmoji('😂')">😂</span>
+            <span onclick="addEmoji('❤️')">❤️</span><span onclick="addEmoji('👍')">👍</span>
+            <span onclick="addEmoji('🔥')">🔥</span><span onclick="addEmoji('😎')">😎</span>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="msgInput" placeholder="Сообщение..." disabled onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button onclick="sendMessage()" id="sendBtn" class="send-btn" disabled>➤</button>
+        </div>
     </div>
 </div>
 
@@ -82,7 +107,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    let myName = localStorage.getItem('chat_username') || prompt("Введите имя:") || "User" + Math.floor(Math.random()*100);
+    let myName = localStorage.getItem('chat_username') || prompt("Ваше имя:") || "User" + Math.floor(Math.random()*100);
     localStorage.setItem('chat_username', myName);
     document.getElementById('myName').textContent = myName;
 
@@ -92,46 +117,44 @@
     onDisconnect(myStatusRef).set({ online: false, lastSeen: serverTimestamp() });
 
     let currentChatId = null;
-    let recipient = null;
 
+    // Список пользователей
     onValue(ref(db, 'status'), (snapshot) => {
         const userList = document.getElementById('userList');
         userList.innerHTML = "";
         snapshot.forEach(child => {
-            const name = child.key;
-            if (name !== myName) {
-                const data = child.val();
+            if (child.key !== myName) {
                 const li = document.createElement('li');
-                li.innerHTML = `${name} <span class="status-dot ${data.online ? 'online' : ''}"></span>`;
-                li.onclick = () => startChat(name);
+                li.innerHTML = `<span>${child.key}</span> <span class="status-dot ${child.val().online ? 'online' : ''}"></span>`;
+                li.onclick = () => startChat(child.key);
                 userList.appendChild(li);
             }
         });
     });
 
-    window.addEmoji = (emoji) => {
-        document.getElementById('msgInput').value += emoji;
-        document.getElementById('msgInput').focus();
+    window.goBack = () => {
+        document.body.classList.remove('in-chat');
     };
 
+    window.addEmoji = (e) => { document.getElementById('msgInput').value += e; document.getElementById('msgInput').focus(); };
+
     function startChat(target) {
-        recipient = target;
         currentChatId = [myName, target].sort().join("_");
-        document.getElementById('chatWith').textContent = "Чат с " + target;
+        document.getElementById('chatWith').textContent = target;
         document.getElementById('msgInput').disabled = false;
         document.getElementById('sendBtn').disabled = false;
         document.getElementById('emojiBar').style.display = 'flex';
+        document.body.classList.add('in-chat'); // Анимация перехода на мобилках
         
         const msgDiv = document.getElementById('messages');
         msgDiv.innerHTML = "";
 
         const chatRef = ref(db, 'private_messages/' + currentChatId);
         onChildAdded(chatRef, (data) => {
-            const val = data.val();
-            renderMessage(data.key, val);
-            if (val.sender !== myName) {
+            renderMessage(data.key, data.val());
+            if (data.val().sender !== myName) {
                 update(ref(db, `private_messages/${currentChatId}/${data.key}`), { seen: true });
-                document.getElementById('notifSound').play().catch(()=>{}); // Проигрываем звук
+                document.getElementById('notifSound').play().catch(()=>{});
             }
         });
 
@@ -147,7 +170,6 @@
     window.sendMessage = () => {
         const input = document.getElementById('msgInput');
         if (!input.value.trim()) return;
-
         push(ref(db, 'private_messages/' + currentChatId), {
             sender: myName,
             text: input.value,
@@ -158,18 +180,13 @@
     };
 
     function renderMessage(id, data) {
-        if(document.getElementById('msg-' + id)) return;
         const msgDiv = document.getElementById('messages');
         const div = document.createElement('div');
         div.id = 'msg-' + id;
         div.className = `msg ${data.sender === myName ? 'my' : 'others'}`;
         
-        const isImage = data.text.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null || (data.text.startsWith('http') && data.text.length > 15);
-        let content = data.text;
-        
-        if (isImage) {
-            content = `<img src="${data.text}" class="chat-img" onerror="this.outerHTML='${data.text}'">`;
-        }
+        const isImage = data.text.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null || (data.text.startsWith('http') && data.text.length > 20);
+        let content = isImage ? `<img src="${data.text}" class="chat-img" onerror="this.outerHTML='${data.text}'">` : data.text;
 
         const ticks = data.sender === myName ? `<span class="status-tick ${data.seen ? 'seen' : ''}">✔✔</span>` : '';
         div.innerHTML = `<div>${content}</div>${ticks}`;
