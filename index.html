@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chat with Clear History</title>
+    <title>Chat with Admin Access</title>
     <style>
         :root {
             --primary: #0084ff;
@@ -12,7 +12,6 @@
             --my-msg: #dcf8c6;
             --admin-color: #f39c12;
             --danger: #ff4757;
-            --global-color: #6c5ce7;
         }
 
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); }
@@ -22,16 +21,19 @@
         /* Контакты */
         #contact-screen { width: 50%; height: 100%; background: white; display: flex; flex-direction: column; }
         .header { padding: 15px; border-bottom: 1px solid #ddd; background: #fff; }
-        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; }
+        .user-info { display: flex; align-items: center; gap: 8px; }
+        .login-link { color: var(--primary); cursor: pointer; text-decoration: underline; font-weight: bold; }
+        
         .search-box { display: flex; gap: 5px; }
         .search-box input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 10px; outline: none; }
         .search-box button { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 12px; }
 
         #userList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
         #userList li { padding: 15px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+        .online-dot { width: 10px; height: 10px; background: #ccc; border-radius: 50%; }
+        .online-dot.active { background: #4caf50; }
         .badge { background: var(--danger); color: white; font-size: 11px; min-width: 18px; height: 18px; border-radius: 10px; display: none; align-items: center; justify-content: center; margin-right: 8px; font-weight: bold; }
-
-        /* Индикатор печати */
         .typing-text { font-size: 11px; color: #4caf50; font-style: italic; display: none; margin-top: 2px; }
 
         /* Чат */
@@ -39,14 +41,13 @@
         .chat-header { background: white; padding: 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ddd; }
         .header-left { display: flex; align-items: center; }
         .back-btn { font-size: 24px; background: none; border: none; color: var(--primary); padding-right: 15px; cursor: pointer; }
-        
-        .clear-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #999; transition: 0.2s; padding: 5px 10px; }
-        .clear-btn:hover { color: var(--danger); }
+        .clear-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #999; }
 
         #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         .msg { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 16px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); position: relative; }
         .msg.my { align-self: flex-end; background: var(--my-msg); border-bottom-right-radius: 2px; }
         .msg.others { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
+        .msg-sender { font-size: 10px; color: #888; margin-bottom: 3px; }
 
         .input-panel { background: white; padding: 10px; border-top: 1px solid #ddd; display: flex; gap: 8px; align-items: center; }
         .input-panel input { flex: 1; border: 1px solid #ddd; padding: 12px; border-radius: 25px; outline: none; }
@@ -57,8 +58,6 @@
         .mic-btn.recording { background: var(--danger); animation: pulse 1.5s infinite; }
 
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        audio { max-width: 100%; height: 35px; margin-top: 5px; }
-
         @media (min-width: 768px) {
             #app-container { width: 100%; transform: none !important; }
             #contact-screen { width: 350px; border-right: 1px solid #ddd; }
@@ -73,11 +72,14 @@
     <div id="contact-screen">
         <div class="header">
             <div class="top-row">
-                <span id="myIdDisplay" style="font-size: 12px; color: #999;"></span>
-                <span id="adminRestart" style="display:none; color:red; cursor:pointer;" onclick="fullReset()">↻</span>
+                <div class="user-info">
+                    <span id="myIdDisplay" style="color: #999;"></span>
+                    <span id="loginBtn" class="login-link" onclick="adminLogin()">вход</span>
+                </div>
+                <span id="adminRestart" style="display:none; color:red; cursor:pointer;" onclick="fullReset()">↻ Сброс базы</span>
             </div>
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Имя...">
+                <input type="text" id="searchInput" placeholder="Поиск пользователя...">
                 <button onclick="searchUser()">🔍</button>
             </div>
         </div>
@@ -88,9 +90,9 @@
         <div class="chat-header">
             <div class="header-left">
                 <button class="back-btn" onclick="closeChat()">❮</button>
-                <div id="chatTitle" style="font-weight: bold; display: flex; align-items: center;"></div>
+                <div id="chatTitle" style="font-weight: bold;"></div>
             </div>
-            <button id="clearChatBtn" class="clear-btn" onclick="clearCurrentChat()" title="Очистить чат">🗑️</button>
+            <button id="clearChatBtn" class="clear-btn" onclick="clearCurrentChat()">🗑️</button>
         </div>
         <div id="messages"></div>
         <div class="input-panel">
@@ -117,17 +119,48 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const ADMIN_CODE = '6739218';
+    
+    // НАСТРОЙКИ АДМИНА
+    const ADMIN_CODE = '6739218'; // Старый способ
+    const ADMIN_PASS = '1234';    // ПАРОЛЬ ДЛЯ ВХОДА
 
     let myName = localStorage.getItem('chat_user') || prompt("Ваше имя:") || "User" + Math.floor(Math.random()*100);
     localStorage.setItem('chat_user', myName);
 
-    const isAdmin = (myName === ADMIN_CODE);
+    // Проверка прав (по коду или по флагу входа)
+    let isAdmin = (myName === ADMIN_CODE || localStorage.getItem('is_admin_active') === 'true');
+
+    // Инициализация интерфейса пользователя
+    const updateUI = () => {
+        const display = document.getElementById('myIdDisplay');
+        const loginBtn = document.getElementById('loginBtn');
+        const restartBtn = document.getElementById('adminRestart');
+
+        if (isAdmin) {
+            display.innerHTML = `Вы: <b style="color:var(--admin-color)">Админ (${myName})</b>`;
+            loginBtn.style.display = 'none';
+            restartBtn.style.display = 'inline-block';
+        } else {
+            display.innerHTML = "Вы: " + myName;
+            loginBtn.style.display = 'inline';
+        }
+    };
+    updateUI();
+
+    // Функция входа
+    window.adminLogin = () => {
+        const pass = prompt("Введите пароль администратора:");
+        if (pass === ADMIN_PASS) {
+            localStorage.setItem('is_admin_active', 'true');
+            isAdmin = true;
+            alert("Вы вошли как администратор!");
+            location.reload();
+        } else {
+            alert("Неверный пароль!");
+        }
+    };
+
     const foundUsers = new Set(JSON.parse(localStorage.getItem('found_users') || "[]"));
-
-    document.getElementById('myIdDisplay').innerHTML = "Вы: " + (isAdmin ? "Админ" : myName);
-    if (isAdmin) document.getElementById('adminRestart').style.display = 'inline-block';
-
     const myStatusRef = ref(db, 'status/' + myName);
     set(myStatusRef, { online: true, typing: false, ts: serverTimestamp() });
     onDisconnect(myStatusRef).set({ online: false, typing: false, ts: serverTimestamp() });
@@ -186,26 +219,14 @@
                     <div>
                         <div style="display:flex; align-items:center;">
                             <span class="badge" id="badge-${user}">0</span>
-                            <span>${user === ADMIN_CODE ? 'Админ' : user}</span>
+                            <span>${user}</span>
                         </div>
                         <div class="typing-text" id="typing-${user}">печатает...</div>
                     </div>
                     <div class="online-dot ${statuses[user].online ? 'active' : ''}"></div>`;
                 li.onclick = () => openChat(user, false);
                 list.appendChild(li);
-                
-                const tInfo = document.getElementById(`typing-${user}`);
-                if (tInfo) tInfo.style.display = statuses[user].typing ? 'block' : 'none';
-                
-                if (targetUser === user) {
-                    const chatTitle = document.getElementById('chatTitle');
-                    const existingTyping = chatTitle.querySelector('.typing-text-header');
-                    if (statuses[user].typing) {
-                        if (!existingTyping) chatTitle.innerHTML += ` <span class="typing-text-header" style="color:#4caf50; font-style:italic; font-size:12px; margin-left:8px;">печатает...</span>`;
-                    } else if (existingTyping) {
-                        existingTyping.remove();
-                    }
-                }
+                document.getElementById(`typing-${user}`).style.display = statuses[user].typing ? 'block' : 'none';
                 watchUnread(user);
             }
         }
@@ -213,15 +234,15 @@
 
     onValue(ref(db, 'status'), snap => renderUserList(snap.val() || {}));
 
-    window.searchUser = async (t) => {
-        const q = t || document.getElementById('searchInput').value.trim();
+    window.searchUser = async () => {
+        const q = document.getElementById('searchInput').value.trim();
         if (!q || q === myName) return;
         const s = await get(child(ref(db), `status/${q}`));
         if (s.exists()) {
             foundUsers.add(q);
             localStorage.setItem('found_users', JSON.stringify([...foundUsers]));
-            if (t) openChat(q, false);
-        }
+            openChat(q, false);
+        } else { alert("Пользователь не найден"); }
     };
 
     window.openChat = (target, global) => {
@@ -230,14 +251,13 @@
         currentChatId = isGlobal ? 'GLOBAL_CHAT' : [myName, target].sort().join("_");
         document.getElementById('chatTitle').textContent = isGlobal ? "📢 Общий чат" : target;
         document.body.classList.add('in-chat');
-        document.getElementById('messages').innerHTML = "";
         
-        // Обычным пользователям скрываем корзину в Общем чате
-        document.getElementById('clearChatBtn').style.display = (isGlobal && !isAdmin) ? "none" : "block";
+        // Корзина видна админу всегда, а юзеру только в личке
+        document.getElementById('clearChatBtn').style.display = (isAdmin || !isGlobal) ? "block" : "none";
 
         const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
         onValue(ref(db, path), (snapshot) => {
-            document.getElementById('messages').innerHTML = ""; // Очищаем для перерисовки при удалении
+            document.getElementById('messages').innerHTML = "";
             snapshot.forEach((childSnap) => {
                 drawMsg(childSnap.key, childSnap.val());
                 if (!isGlobal && childSnap.val().sender !== myName) update(ref(db, path + '/' + childSnap.key), { seen: true });
@@ -245,22 +265,18 @@
         });
     };
 
-    // ФУНКЦИЯ ОЧИСТКИ ТЕКУЩЕГО ЧАТА
     window.clearCurrentChat = async () => {
-        const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
-        const confirmMsg = isGlobal ? "Вы уверены, что хотите удалить ВСЕ сообщения в Общем чате для всех?" : "Очистить историю переписки?";
-        
-        if (confirm(confirmMsg)) {
+        if (confirm("Удалить историю этого чата?")) {
+            const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
             await remove(ref(db, path));
-            document.getElementById('messages').innerHTML = "";
         }
     };
 
     function drawMsg(id, data) {
         const div = document.createElement('div');
-        div.id = 'm-' + id;
         div.className = `msg ${data.sender === myName ? 'my' : 'others'}`;
-        let content = data.voice ? `<audio controls src="${data.voice}"></audio>` : `<div>${data.text}</div>`;
+        let content = `<div class="msg-sender">${data.sender}</div>`;
+        content += data.voice ? `<audio controls src="${data.voice}"></audio>` : `<div>${data.text}</div>`;
         div.innerHTML = content;
         document.getElementById('messages').appendChild(div);
         document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
@@ -286,7 +302,7 @@
     }
 
     window.closeChat = () => { targetUser = null; document.body.classList.remove('in-chat'); };
-    window.fullReset = async () => { if(confirm("Сброс?")) { await set(ref(db), null); localStorage.clear(); location.reload(); } };
+    window.fullReset = async () => { if(confirm("ВНИМАНИЕ! Это удалит ВООБЩЕ ВСЕ данные из базы. Продолжить?")) { await set(ref(db), null); localStorage.clear(); location.reload(); } };
 </script>
 </body>
 </html>
