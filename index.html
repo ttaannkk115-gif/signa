@@ -6,90 +6,85 @@
     <title>Mobile Firebase Chat</title>
     <style>
         :root {
-            --primary-color: #0084ff;
-            --bg-color: #f0f2f5;
+            --primary: #0084ff;
+            --bg: #f0f2f5;
             --chat-bg: #e5ddd5;
+            --my-msg: #dcf8c6;
         }
 
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg-color); overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; }
 
-        /* Контейнер для экранов */
-        #main-wrapper { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
+        /* Контейнер для переключения экранов */
+        #app-container { display: flex; width: 200%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        body.in-chat #app-container { transform: translateX(-50%); }
 
-        /* Список контактов */
-        #sidebar { width: 100%; min-width: 100%; background: #fff; display: flex; flex-direction: column; z-index: 10; }
-        .sidebar-header { padding: 15px; font-weight: bold; background: #fff; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; font-size: 18px; }
+        /* ЭКРАН 1: Список контактов */
+        #contact-screen { width: 50%; height: 100%; background: white; display: flex; flex-direction: column; }
+        .header { padding: 15px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
         
         #userList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        #userList li { padding: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
-        .status-dot.online { background: #4caf50; }
+        #userList li { padding: 15px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+        .online-dot { width: 10px; height: 10px; background: #ccc; border-radius: 50%; }
+        .online-dot.active { background: #4caf50; box-shadow: 0 0 5px #4caf50; }
 
-        /* Окно чата */
-        #chat-container { width: 100%; min-width: 100%; display: flex; flex-direction: column; background: var(--chat-bg); }
-        .chat-header { padding: 10px 15px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
-        .back-btn { display: block; font-size: 24px; cursor: pointer; color: var(--primary-color); background: none; border: none; padding: 0 10px; }
+        /* ЭКРАН 2: Окно чата */
+        #chat-screen { width: 50%; height: 100%; background: var(--chat-bg); display: flex; flex-direction: column; }
+        .chat-header { background: white; padding: 10px; display: flex; align-items: center; border-bottom: 1px solid #ddd; }
+        .back-btn { font-size: 24px; background: none; border: none; color: var(--primary); padding-right: 15px; cursor: pointer; }
 
-        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 85%; padding: 8px 12px; border-radius: 15px; font-size: 15px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
-        .msg.my { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
-        .msg.others { align-self: flex-start; background: #fff; border-bottom-left-radius: 2px; }
+        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 16px; position: relative; line-height: 1.4; }
+        .msg.my { align-self: flex-end; background: var(--my-msg); border-bottom-right-radius: 2px; }
+        .msg.others { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
         
-        .status-tick { font-size: 11px; margin-left: 5px; color: #999; float: right; margin-top: 4px; }
-        .status-tick.seen { color: #34b7f1; }
-        .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; }
+        .ticks { font-size: 10px; margin-left: 5px; color: #999; float: right; margin-top: 5px; }
+        .ticks.seen { color: #34b7f1; }
+        .chat-img { max-width: 100%; border-radius: 10px; display: block; }
 
-        /* Ввод сообщения */
-        .emoji-bar { padding: 8px; background: #fff; display: flex; gap: 15px; overflow-x: auto; border-top: 1px solid #eee; }
-        .input-area { padding: 10px; background: #fff; display: flex; gap: 8px; align-items: center; }
-        input { flex: 1; border: 1px solid #ddd; padding: 12px 15px; border-radius: 25px; outline: none; font-size: 16px; background: #f0f2f5; }
-        .send-btn { background: var(--primary-color); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        /* Ввод */
+        .input-panel { background: white; padding: 10px; display: flex; flex-direction: column; }
+        .emoji-bar { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 8px; font-size: 20px; }
+        .input-row { display: flex; gap: 10px; align-items: center; }
+        input { flex: 1; border: 1px solid #ddd; padding: 12px; border-radius: 25px; outline: none; font-size: 16px; background: #f8f9fa; }
+        .send-btn { width: 45px; height: 45px; border-radius: 50%; background: var(--primary); border: none; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; }
 
-        /* Состояния для мобильного переключения */
-        body.in-chat #main-wrapper { transform: translateX(-100%); }
-
-        /* Десктопная версия (если экран широкий) */
+        /* Для ПК */
         @media (min-width: 768px) {
-            #sidebar { width: 350px; min-width: 350px; }
-            #chat-container { min-width: auto; }
-            #main-wrapper { transform: none !important; }
+            #app-container { width: 100%; transform: none !important; }
+            #contact-screen { width: 350px; border-right: 1px solid #ddd; }
+            #chat-screen { width: calc(100% - 350px); }
             .back-btn { display: none; }
         }
     </style>
 </head>
 <body>
 
-<div id="main-wrapper">
-    <div id="sidebar">
-        <div class="sidebar-header">
-            <span>Чаты</span>
-            <span id="myName" style="font-size: 12px; color: #888;"></span>
-        </div>
+<div id="app-container">
+    <div id="contact-screen">
+        <div class="header">Чаты <span id="myId" style="font-size: 12px; color: #999;"></span></div>
         <ul id="userList"></ul>
     </div>
 
-    <div id="chat-container">
+    <div id="chat-screen">
         <div class="chat-header">
-            <button class="back-btn" onclick="goBack()">❮</button>
-            <div id="chatWith" style="font-weight: bold;">Выберите контакт</div>
+            <button class="back-btn" onclick="closeChat()">❮</button>
+            <div id="chatTitle" style="font-weight: bold;">Выбери контакт</div>
         </div>
-        
         <div id="messages"></div>
-        
-        <div class="emoji-bar" id="emojiBar" style="display:none;">
-            <span onclick="addEmoji('😀')">😀</span><span onclick="addEmoji('😂')">😂</span>
-            <span onclick="addEmoji('❤️')">❤️</span><span onclick="addEmoji('👍')">👍</span>
-            <span onclick="addEmoji('🔥')">🔥</span><span onclick="addEmoji('😎')">😎</span>
-        </div>
-
-        <div class="input-area">
-            <input type="text" id="msgInput" placeholder="Сообщение..." disabled onkeypress="if(event.key === 'Enter') sendMessage()">
-            <button onclick="sendMessage()" id="sendBtn" class="send-btn" disabled>➤</button>
+        <div class="input-panel">
+            <div class="emoji-bar" id="emojiRow" style="display:none">
+                <span onclick="addEmoji('😀')">😀</span><span onclick="addEmoji('😂')">😂</span><span onclick="addEmoji('❤️')">❤️</span>
+                <span onclick="addEmoji('👍')">👍</span><span onclick="addEmoji('🔥')">🔥</span><span onclick="addEmoji('😎')">😎</span>
+            </div>
+            <div class="input-row">
+                <input type="text" id="msgInput" placeholder="Сообщение..." disabled>
+                <button onclick="sendMessage()" id="sendBtn" class="send-btn" disabled>➤</button>
+            </div>
         </div>
     </div>
 </div>
 
-<audio id="notifSound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"></audio>
+<audio id="pop" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"></audio>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -107,65 +102,59 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    let myName = localStorage.getItem('chat_username') || prompt("Ваше имя:") || "User" + Math.floor(Math.random()*100);
-    localStorage.setItem('chat_username', myName);
-    document.getElementById('myName').textContent = myName;
+    let myName = localStorage.getItem('chat_user') || prompt("Имя:") || "User" + Math.floor(Math.random()*100);
+    localStorage.setItem('chat_user', myName);
+    document.getElementById('myId').textContent = myName;
 
-    // Статус ONLINE
-    const myStatusRef = ref(db, 'status/' + myName);
-    set(myStatusRef, { online: true, lastSeen: serverTimestamp() });
-    onDisconnect(myStatusRef).set({ online: false, lastSeen: serverTimestamp() });
+    // Статус онлайн
+    const myStatus = ref(db, 'status/' + myName);
+    set(myStatus, { online: true, lastSeen: serverTimestamp() });
+    onDisconnect(myStatus).set({ online: false, lastSeen: serverTimestamp() });
 
     let currentChatId = null;
 
-    // Список пользователей
-    onValue(ref(db, 'status'), (snapshot) => {
-        const userList = document.getElementById('userList');
-        userList.innerHTML = "";
-        snapshot.forEach(child => {
+    // Список контактов
+    onValue(ref(db, 'status'), (snap) => {
+        const list = document.getElementById('userList');
+        list.innerHTML = "";
+        snap.forEach(child => {
             if (child.key !== myName) {
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${child.key}</span> <span class="status-dot ${child.val().online ? 'online' : ''}"></span>`;
-                li.onclick = () => startChat(child.key);
-                userList.appendChild(li);
+                li.innerHTML = `<span>${child.key}</span> <div class="online-dot ${child.val().online ? 'active' : ''}"></div>`;
+                li.onclick = () => openChat(child.key);
+                list.appendChild(li);
             }
         });
     });
 
-    window.goBack = () => {
-        document.body.classList.remove('in-chat');
-    };
-
-    window.addEmoji = (e) => { document.getElementById('msgInput').value += e; document.getElementById('msgInput').focus(); };
-
-    function startChat(target) {
+    window.openChat = (target) => {
         currentChatId = [myName, target].sort().join("_");
-        document.getElementById('chatWith').textContent = target;
+        document.getElementById('chatTitle').textContent = target;
         document.getElementById('msgInput').disabled = false;
         document.getElementById('sendBtn').disabled = false;
-        document.getElementById('emojiBar').style.display = 'flex';
-        document.body.classList.add('in-chat'); // Анимация перехода на мобилках
+        document.getElementById('emojiRow').style.display = 'flex';
+        document.body.classList.add('in-chat');
         
         const msgDiv = document.getElementById('messages');
         msgDiv.innerHTML = "";
-
         const chatRef = ref(db, 'private_messages/' + currentChatId);
-        onChildAdded(chatRef, (data) => {
-            renderMessage(data.key, data.val());
-            if (data.val().sender !== myName) {
-                update(ref(db, `private_messages/${currentChatId}/${data.key}`), { seen: true });
-                document.getElementById('notifSound').play().catch(()=>{});
+        
+        onChildAdded(chatRef, (snap) => {
+            drawMsg(snap.key, snap.val());
+            if (snap.val().sender !== myName) {
+                update(ref(db, `private_messages/${currentChatId}/${snap.key}`), { seen: true });
+                document.getElementById('pop').play().catch(()=>{});
             }
         });
 
-        onChildChanged(chatRef, (data) => {
-            const el = document.getElementById('msg-' + data.key);
-            if (el && data.val().seen) {
-                const tick = el.querySelector('.status-tick');
-                if (tick) tick.classList.add('seen');
-            }
+        onChildChanged(chatRef, (snap) => {
+            const el = document.getElementById('m-' + snap.key);
+            if (el && snap.val().seen) el.querySelector('.ticks').classList.add('seen');
         });
-    }
+    };
+
+    window.closeChat = () => document.body.classList.remove('in-chat');
+    window.addEmoji = (e) => document.getElementById('msgInput').value += e;
 
     window.sendMessage = () => {
         const input = document.getElementById('msgInput');
@@ -174,24 +163,24 @@
             sender: myName,
             text: input.value,
             seen: false,
-            timestamp: serverTimestamp()
+            ts: serverTimestamp()
         });
         input.value = "";
     };
 
-    function renderMessage(id, data) {
-        const msgDiv = document.getElementById('messages');
+    function drawMsg(id, data) {
+        if (document.getElementById('m-' + id)) return;
         const div = document.createElement('div');
-        div.id = 'msg-' + id;
+        div.id = 'm-' + id;
         div.className = `msg ${data.sender === myName ? 'my' : 'others'}`;
         
-        const isImage = data.text.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null || (data.text.startsWith('http') && data.text.length > 20);
-        let content = isImage ? `<img src="${data.text}" class="chat-img" onerror="this.outerHTML='${data.text}'">` : data.text;
-
-        const ticks = data.sender === myName ? `<span class="status-tick ${data.seen ? 'seen' : ''}">✔✔</span>` : '';
+        const isImg = data.text.match(/\.(jpg|jpeg|png|gif|webp)$/i) || data.text.startsWith('http');
+        const content = isImg ? `<img src="${data.text}" class="chat-img" onerror="this.outerHTML='${data.text}'">` : data.text;
+        const ticks = data.sender === myName ? `<span class="ticks ${data.seen ? 'seen' : ''}">✔✔</span>` : '';
+        
         div.innerHTML = `<div>${content}</div>${ticks}`;
-        msgDiv.appendChild(div);
-        msgDiv.scrollTop = msgDiv.scrollHeight;
+        document.getElementById('messages').appendChild(div);
+        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
     }
 </script>
 </body>
