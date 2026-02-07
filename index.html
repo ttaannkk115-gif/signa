@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chat with Admin Access</title>
+    <title>Real-time Chat App</title>
     <style>
         :root {
             --primary: #0084ff;
@@ -18,8 +18,11 @@
         #app-container { display: flex; width: 200%; height: 100%; transition: transform 0.3s ease; }
         body.in-chat #app-container { transform: translateX(-50%); }
 
-        /* Контакты */
+        /* Экраны */
         #contact-screen { width: 50%; height: 100%; background: white; display: flex; flex-direction: column; }
+        #chat-screen { width: 50%; height: 100%; background: var(--chat-bg); display: flex; flex-direction: column; }
+
+        /* Хедер списка контактов */
         .header { padding: 15px; border-bottom: 1px solid #ddd; background: #fff; }
         .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; }
         .user-info { display: flex; align-items: center; gap: 8px; }
@@ -27,8 +30,9 @@
         
         .search-box { display: flex; gap: 5px; }
         .search-box input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 10px; outline: none; }
-        .search-box button { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 12px; }
+        .search-box button { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 12px; cursor: pointer; }
 
+        /* Список пользователей */
         #userList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
         #userList li { padding: 15px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
         .online-dot { width: 10px; height: 10px; background: #ccc; border-radius: 50%; }
@@ -36,8 +40,7 @@
         .badge { background: var(--danger); color: white; font-size: 11px; min-width: 18px; height: 18px; border-radius: 10px; display: none; align-items: center; justify-content: center; margin-right: 8px; font-weight: bold; }
         .typing-text { font-size: 11px; color: #4caf50; font-style: italic; display: none; margin-top: 2px; }
 
-        /* Чат */
-        #chat-screen { width: 50%; height: 100%; background: var(--chat-bg); display: flex; flex-direction: column; }
+        /* Чат внутри */
         .chat-header { background: white; padding: 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ddd; }
         .header-left { display: flex; align-items: center; }
         .back-btn { font-size: 24px; background: none; border: none; color: var(--primary); padding-right: 15px; cursor: pointer; }
@@ -47,8 +50,9 @@
         .msg { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 16px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); position: relative; }
         .msg.my { align-self: flex-end; background: var(--my-msg); border-bottom-right-radius: 2px; }
         .msg.others { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
-        .msg-sender { font-size: 10px; color: #888; margin-bottom: 3px; }
+        .msg-sender { font-size: 10px; color: #888; margin-bottom: 3px; font-weight: bold; }
 
+        /* Панель ввода */
         .input-panel { background: white; padding: 10px; border-top: 1px solid #ddd; display: flex; gap: 8px; align-items: center; }
         .input-panel input { flex: 1; border: 1px solid #ddd; padding: 12px; border-radius: 25px; outline: none; }
         
@@ -58,6 +62,7 @@
         .mic-btn.recording { background: var(--danger); animation: pulse 1.5s infinite; }
 
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
         @media (min-width: 768px) {
             #app-container { width: 100%; transform: none !important; }
             #contact-screen { width: 350px; border-right: 1px solid #ddd; }
@@ -76,10 +81,9 @@
                     <span id="myIdDisplay" style="color: #999;"></span>
                     <span id="loginBtn" class="login-link" onclick="adminLogin()">вход</span>
                 </div>
-                <span id="adminRestart" style="display:none; color:red; cursor:pointer;" onclick="fullReset()">↻ Сброс базы</span>
             </div>
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Поиск пользователя...">
+                <input type="text" id="searchInput" placeholder="Найти человека...">
                 <button onclick="searchUser()">🔍</button>
             </div>
         </div>
@@ -92,7 +96,7 @@
                 <button class="back-btn" onclick="closeChat()">❮</button>
                 <div id="chatTitle" style="font-weight: bold;"></div>
             </div>
-            <button id="clearChatBtn" class="clear-btn" onclick="clearCurrentChat()">🗑️</button>
+            <button id="clearChatBtn" class="clear-btn" onclick="clearCurrentChat()" title="Очистить историю">🗑️</button>
         </div>
         <div id="messages"></div>
         <div class="input-panel">
@@ -105,7 +109,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, set, onValue, onDisconnect, serverTimestamp, update, get, child, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, update, get, child, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAbulx85P1UVmdN7WeP1v4yZOxAxLT4-5E",
@@ -119,39 +123,34 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    
-    // НАСТРОЙКИ АДМИНА
-    const ADMIN_PASS = '6739218';    // ПАРОЛЬ ДЛЯ ВХОДА
 
-    let myName = localStorage.getItem('chat_user') || prompt("Ваше имя:") || "User" + Math.floor(Math.random()*100);
+    // --- ЛОГИКА АДМИНА ---
+    const ADMIN_PASS = '6739218';
+    let myName = localStorage.getItem('chat_user') || prompt("Введите ваше имя:") || "Гость" + Math.floor(Math.random()*100);
     localStorage.setItem('chat_user', myName);
 
-    // Проверка прав (по коду или по флагу входа)
-    let isAdmin = (myName === ADMIN_CODE || localStorage.getItem('is_admin_active') === 'true');
+    let isAdmin = localStorage.getItem('is_admin_active') === 'true';
 
-    // Инициализация интерфейса пользователя
-    const updateUI = () => {
+    function refreshAdminUI() {
         const display = document.getElementById('myIdDisplay');
         const loginBtn = document.getElementById('loginBtn');
-        const restartBtn = document.getElementById('adminRestart');
 
         if (isAdmin) {
             display.innerHTML = `Вы: <b style="color:var(--admin-color)">Админ (${myName})</b>`;
             loginBtn.style.display = 'none';
-            restartBtn.style.display = 'inline-block';
         } else {
             display.innerHTML = "Вы: " + myName;
             loginBtn.style.display = 'inline';
         }
-    };
-    updateUI();
+    }
+    refreshAdminUI();
 
-    // Функция входа
     window.adminLogin = () => {
         const pass = prompt("Введите пароль администратора:");
         if (pass === ADMIN_PASS) {
             localStorage.setItem('is_admin_active', 'true');
             isAdmin = true;
+            refreshAdminUI();
             alert("Вы вошли как администратор!");
             location.reload();
         } else {
@@ -159,8 +158,10 @@
         }
     };
 
+    // --- ОСНОВНОЙ ЧАТ ---
     const foundUsers = new Set(JSON.parse(localStorage.getItem('found_users') || "[]"));
     const myStatusRef = ref(db, 'status/' + myName);
+    
     set(myStatusRef, { online: true, typing: false, ts: serverTimestamp() });
     onDisconnect(myStatusRef).set({ online: false, typing: false, ts: serverTimestamp() });
 
@@ -182,19 +183,21 @@
     const micBtn = document.getElementById('micBtn');
     micBtn.addEventListener('click', async () => {
         if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const reader = new FileReader();
-                reader.readAsDataURL(new Blob(audioChunks, { type: 'audio/webm' }));
-                reader.onloadend = () => sendVoice(reader.result);
-                stream.getTracks().forEach(t => t.stop());
-            };
-            mediaRecorder.start();
-            micBtn.classList.add('recording');
-            micBtn.textContent = '⏹️';
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(new Blob(audioChunks, { type: 'audio/webm' }));
+                    reader.onloadend = () => sendVoice(reader.result);
+                    stream.getTracks().forEach(t => t.stop());
+                };
+                mediaRecorder.start();
+                micBtn.classList.add('recording');
+                micBtn.textContent = '⏹️';
+            } catch (err) { alert("Микрофон недоступен"); }
         } else {
             mediaRecorder.stop();
             micBtn.classList.remove('recording');
@@ -225,7 +228,9 @@
                     <div class="online-dot ${statuses[user].online ? 'active' : ''}"></div>`;
                 li.onclick = () => openChat(user, false);
                 list.appendChild(li);
-                document.getElementById(`typing-${user}`).style.display = statuses[user].typing ? 'block' : 'none';
+                if(document.getElementById(`typing-${user}`)) {
+                    document.getElementById(`typing-${user}`).style.display = statuses[user].typing ? 'block' : 'none';
+                }
                 watchUnread(user);
             }
         }
@@ -241,7 +246,7 @@
             foundUsers.add(q);
             localStorage.setItem('found_users', JSON.stringify([...foundUsers]));
             openChat(q, false);
-        } else { alert("Пользователь не найден"); }
+        } else { alert("Пользователь не найден."); }
     };
 
     window.openChat = (target, global) => {
@@ -250,36 +255,27 @@
         currentChatId = isGlobal ? 'GLOBAL_CHAT' : [myName, target].sort().join("_");
         document.getElementById('chatTitle').textContent = isGlobal ? "📢 Общий чат" : target;
         document.body.classList.add('in-chat');
-        
-        // Корзина видна админу всегда, а юзеру только в личке
         document.getElementById('clearChatBtn').style.display = (isAdmin || !isGlobal) ? "block" : "none";
 
         const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
         onValue(ref(db, path), (snapshot) => {
-            document.getElementById('messages').innerHTML = "";
+            const msgBox = document.getElementById('messages');
+            msgBox.innerHTML = "";
             snapshot.forEach((childSnap) => {
-                drawMsg(childSnap.key, childSnap.val());
-                if (!isGlobal && childSnap.val().sender !== myName) update(ref(db, path + '/' + childSnap.key), { seen: true });
+                const data = childSnap.val();
+                const div = document.createElement('div');
+                div.className = `msg ${data.sender === myName ? 'my' : 'others'}`;
+                let content = `<div class="msg-sender">${data.sender}</div>`;
+                content += data.voice ? `<audio controls src="${data.voice}"></audio>` : `<div>${data.text}</div>`;
+                div.innerHTML = content;
+                msgBox.appendChild(div);
+                if (!isGlobal && data.sender !== myName && !data.seen) {
+                    update(ref(db, path + '/' + childSnap.key), { seen: true });
+                }
             });
+            msgBox.scrollTop = msgBox.scrollHeight;
         });
     };
-
-    window.clearCurrentChat = async () => {
-        if (confirm("Удалить историю этого чата?")) {
-            const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
-            await remove(ref(db, path));
-        }
-    };
-
-    function drawMsg(id, data) {
-        const div = document.createElement('div');
-        div.className = `msg ${data.sender === myName ? 'my' : 'others'}`;
-        let content = `<div class="msg-sender">${data.sender}</div>`;
-        content += data.voice ? `<audio controls src="${data.voice}"></audio>` : `<div>${data.text}</div>`;
-        div.innerHTML = content;
-        document.getElementById('messages').appendChild(div);
-        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-    }
 
     window.sendMessage = () => {
         const val = document.getElementById('msgInput').value.trim();
@@ -288,6 +284,13 @@
         const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
         push(ref(db, path), { sender: myName, text: val, seen: false, ts: serverTimestamp() });
         document.getElementById('msgInput').value = "";
+    };
+
+    window.clearCurrentChat = async () => {
+        if (confirm("Удалить сообщения в этом чате для всех?")) {
+            const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
+            await remove(ref(db, path));
+        }
     };
 
     function watchUnread(sender) {
@@ -301,7 +304,6 @@
     }
 
     window.closeChat = () => { targetUser = null; document.body.classList.remove('in-chat'); };
-    window.fullReset = async () => { if(confirm("ВНИМАНИЕ! Это удалит ВООБЩЕ ВСЕ данные из базы. Продолжить?")) { await set(ref(db), null); localStorage.clear(); location.reload(); } };
 </script>
 </body>
 </html>
