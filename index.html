@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Universe Messenger Pro</title>
+    <title>Universe Messenger Ultimate</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
     
     <style>
-        :root { --main: #075e54; --accent: #25d366; --bg: #e5ddd5; --light: #dcf8c6; }
+        :root { --main: #075e54; --accent: #25d366; --bg: #e5ddd5; --light: #dcf8c6; --blue: #34b7f1; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background: var(--bg); height: 100vh; display: flex; justify-content: center; overflow: hidden; }
 
@@ -34,19 +34,24 @@
         
         .msg-wrapper { display: flex; gap: 8px; max-width: 85%; align-items: flex-end; }
         .msg-wrapper.mine { align-self: flex-end; flex-direction: row-reverse; }
-        .msg { padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; box-shadow: 0 1px 1px rgba(0,0,0,0.1); position: relative; }
+        .msg { padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; box-shadow: 0 1px 1px rgba(0,0,0,0.1); position: relative; min-width: 60px; }
         .mine .msg { background: var(--light); }
         .others .msg { background: #fff; }
 
-        .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #ccc; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; flex-shrink: 0; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #ccc; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; flex-shrink: 0; overflow: hidden; }
         .input-area { padding: 10px; background: #f0f0f0; display: flex; align-items: center; gap: 8px; }
         .input-area input { flex: 1; padding: 10px; border-radius: 20px; border: none; outline: none; }
         
         #search-results { position: absolute; top: 110px; left: 5%; width: 90%; background: #128c7e; z-index: 100; border-radius: 8px; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .search-item { padding: 12px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
+        .read-status { font-size: 0.8rem; margin-left: 5px; }
+        .read-status.read { color: var(--blue); font-weight: bold; }
+        .read-status.unread { color: gray; }
     </style>
 </head>
 <body>
+
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
     <div id="call-screen">
         <div class="video-container">
@@ -84,7 +89,7 @@
                 </div>
                 <button onclick="logout()" style="background:none; border:none; color:#fff; font-size:0.8rem; margin-left:10px; opacity:0.7;">Выход</button>
             </div>
-            <input type="text" placeholder="Поиск людей и групп..." oninput="search(this.value)" style="width:100%; margin-top:10px; padding:8px; border-radius:8px; border:none;">
+            <input type="text" placeholder="Поиск людей..." oninput="search(this.value)" style="width:100%; margin-top:10px; padding:8px; border-radius:8px; border:none; outline:none;">
             <div id="search-results"></div>
         </header>
 
@@ -102,13 +107,13 @@
     <script>
         // --- ЗАМЕНИТЕ ЭТИ ДАННЫЕ НА ВАШИ ИЗ FIREBASE CONSOLE ---
         const firebaseConfig = {
-            apiKey: "AIzaSyAbulx85P1UVmdN7WeP1v4yZOxAxlT4-5E",
-            authDomain: "chat-25292.firebaseapp.com",
-            databaseURL: "https://chat-25292-default-rtdb.firebaseio.com",
-            projectId: "chat-25292",
-            storageBucket: "chat-25292.appspot.com",
-            messagingSenderId: "982262580373",
-            appId: "1:982262580373:web:d411a8b651de02afcd879c"
+            apiKey: "ТВОЙ_API_KEY",
+            authDomain: "ТВОЙ_PROJECT.firebaseapp.com",
+            databaseURL: "https://ТВОЙ_PROJECT.firebaseio.com",
+            projectId: "ТВОЙ_PROJECT",
+            storageBucket: "ТВОЙ_PROJECT.appspot.com",
+            messagingSenderId: "ID",
+            appId: "APP_ID"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -116,7 +121,7 @@
         let currentUser = "", currentAvatar = "", currentChatRoom = null, currentRoomData = null;
         let pc, localStream, mediaRecorder, audioChunks = [], typingTimeout;
 
-        // АВТО-ВХОД
+        // --- ВХОД И РЕГИСТРАЦИЯ ---
         window.onload = async () => {
             const n = localStorage.getItem('chat_user'), p = localStorage.getItem('chat_pass');
             if(n && p) {
@@ -127,15 +132,6 @@
                 }
             }
         };
-
-        function previewAvatar(i) {
-            const f = i.files[0];
-            if(f) {
-                const r = new FileReader();
-                r.onload = e => { document.getElementById('avatar-preview').src = e.target.result; document.getElementById('avatar-preview').style.display = 'block'; document.getElementById('avatar-placeholder').style.display = 'none'; };
-                r.readAsDataURL(f);
-            }
-        }
 
         async function login() {
             const n = document.getElementById('username').value.trim().toLowerCase(), p = document.getElementById('password').value.trim(), f = document.getElementById('avatar-input').files[0];
@@ -157,21 +153,32 @@
         function enterApp() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('chat-screen').style.display = 'flex';
-            listenForCalls(); showStartPlaceholder();
+            listenForCalls(); showStartPlaceholder(); listenForGlobalNotifs();
         }
 
         function logout() { localStorage.clear(); location.reload(); }
 
-        // ПОИСК И СПИСОК ЧАТОВ
+        function previewAvatar(i) {
+            const f = i.files[0];
+            if(f) {
+                const r = new FileReader();
+                r.onload = e => { document.getElementById('avatar-preview').src = e.target.result; document.getElementById('avatar-preview').style.display = 'block'; document.getElementById('avatar-placeholder').style.display = 'none'; };
+                r.readAsDataURL(f);
+            }
+        }
+
+        // --- ПОИСК И СПИСОК ЧАТОВ ---
         function search(q) {
             const res = document.getElementById('search-results');
             if(q.length < 2) return res.style.display = 'none';
             res.innerHTML = "";
             db.ref("all_users").orderByKey().startAt(q).endAt(q+"\uf8ff").limitToFirst(5).once("value", s => {
                 s.forEach(c => {
-                    const d = document.createElement('div'); d.className='search-item'; d.textContent = "👤 "+c.key;
-                    d.onclick = () => { openPrivate(c.key); res.style.display='none'; };
-                    res.appendChild(d);
+                    if(c.key !== currentUser) {
+                        const d = document.createElement('div'); d.className='search-item'; d.textContent = "👤 "+c.key;
+                        d.onclick = () => { openPrivate(c.key); res.style.display='none'; };
+                        res.appendChild(d);
+                    }
                 });
             });
             res.style.display = 'block';
@@ -184,7 +191,6 @@
             document.getElementById('call-btns').style.display = 'none';
             document.getElementById('input-bar').style.display = 'none';
             document.getElementById('typing-indicator').style.display = 'none';
-            
             const msgBox = document.getElementById('messages');
             msgBox.innerHTML = `<div class="recent-chats-list" id="recents"></div>`;
             
@@ -193,14 +199,15 @@
                 rBox.innerHTML = ""; let items = []; s.forEach(c => items.unshift(c.val()));
                 items.forEach(i => {
                     const d = document.createElement('div'); d.className='chat-item';
-                    d.innerHTML = `<div class="user-avatar">${i.avatar ? `<img src="${i.avatar}" style="width:100%;height:100%;border-radius:50%">` : i.name[0]}</div>
-                                   <div><b>${i.name}</b><br><small style="color:gray">${i.last || 'Нажмите, чтобы войти'}</small></div>`;
+                    d.innerHTML = `<div class="user-avatar">${i.avatar ? `<img src="${i.avatar}" style="width:100%;height:100%;border-radius:50%">` : i.name[0].toUpperCase()}</div>
+                                   <div><b>${i.name}</b><br><small style="color:gray">${i.last || ''}</small></div>`;
                     d.onclick = () => openPrivate(i.name);
                     rBox.appendChild(d);
                 });
             });
         }
 
+        // --- СООБЩЕНИЯ ---
         function openPrivate(target) {
             currentChatRoom = "p2p_" + [currentUser, target].sort().join("_");
             currentRoomData = { name: target, type: 'private' };
@@ -210,48 +217,60 @@
             document.getElementById('input-bar').style.display = 'flex';
             loadMessages(); listenForTyping();
             db.ref(`all_users/${target}`).once('value', s => {
-                db.ref(`recents/${currentUser}/${currentChatRoom}`).set({ name: target, at: Date.now(), avatar: s.val().avatar || "" });
+                db.ref(`recents/${currentUser}/${currentChatRoom}`).update({ name: target, at: Date.now(), avatar: s.val().avatar || "" });
             });
         }
 
-        // СООБЩЕНИЯ И ФУНКЦИИ
+        function sendText() {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            if (!text || !currentChatRoom) return;
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const target = currentRoomData.name;
+
+            const msgData = { s: currentUser, t: text, at: time, timestamp: Date.now(), read: false };
+            db.ref(`messages/${currentChatRoom}`).push().set(msgData);
+
+            // Обновление ресентов
+            const update = { at: Date.now(), last: text };
+            db.ref(`recents/${currentUser}/${currentChatRoom}`).update(update);
+            db.ref(`recents/${target}/${currentChatRoom}`).update({...update, name: currentUser, avatar: currentAvatar});
+
+            input.value = ""; db.ref(`typing/${currentChatRoom}/${currentUser}`).remove();
+        }
+
         function loadMessages() {
             const container = document.getElementById('messages');
-            db.ref(`msgs/${currentChatRoom}`).off();
-            db.ref(`msgs/${currentChatRoom}`).on("value", async s => {
+            db.ref(`messages/${currentChatRoom}`).off();
+            db.ref(`messages/${currentChatRoom}`).on("value", async s => {
                 container.innerHTML = "";
-                const uSnap = await db.ref("all_users").once("value");
-                const users = uSnap.val() || {};
+                const uSnap = await db.ref("all_users").once("value"), users = uSnap.val() || {};
                 s.forEach(c => {
-                    const d = c.val(), isMine = d.s === currentUser;
-                    const wrap = document.createElement('div'); wrap.className = `msg-wrapper ${isMine?'mine':'others'}`;
-                    let content = d.t ? `<div>${d.t}</div>` : "";
-                    if(d.img) content += `<img src="${d.img}" style="max-width:200px; border-radius:8px; margin-top:5px;">`;
-                    if(d.v) content += `<audio controls src="${d.v}" style="height:30px; width:160px;"></audio>`;
+                    const data = c.val(), msgId = c.key, isMine = data.s === currentUser;
+                    if (!isMine && !data.read) db.ref(`messages/${currentChatRoom}/${msgId}/read`).set(true);
                     
-                    wrap.innerHTML = `<div class="user-avatar">${users[d.s]?.avatar ? `<img src="${users[d.s].avatar}" style="width:100%;height:100%;border-radius:50%">` : d.s[0]}</div>
-                                      <div class="msg"><b>${d.s}</b>${content}<div style="font-size:0.6rem; text-align:right; opacity:0.5;">${d.at}</div></div>`;
+                    const statusHtml = isMine ? `<span class="read-status ${data.read?'read':'unread'}">${data.read?'✓✓':'✓'}</span>` : "";
+                    const wrap = document.createElement('div'); wrap.className = `msg-wrapper ${isMine?'mine':'others'}`;
+                    wrap.innerHTML = `<div class="user-avatar">${users[data.s]?.avatar ? `<img src="${users[data.s].avatar}" style="width:100%;height:100%;border-radius:50%">` : data.s[0].toUpperCase()}</div>
+                        <div class="msg">
+                            <div style="display:flex; justify-content:space-between; gap:10px;">
+                                <b style="font-size:0.7rem; color:var(--main);">${data.s}</b>
+                                ${isMine ? `<span onclick="deleteMessage('${msgId}')" style="cursor:pointer; opacity:0.5; font-size:0.7rem;">🗑️</span>` : ''}
+                            </div>
+                            <div>${data.t}</div>
+                            <div style="font-size:0.6rem; text-align:right; opacity:0.5; margin-top:3px;">${data.at} ${statusHtml}</div>
+                        </div>`;
                     container.appendChild(wrap);
                 });
                 container.scrollTop = container.scrollHeight;
             });
         }
 
-        function sendText() {
-            const i = document.getElementById('msg-input'); if(!i.value.trim()) return;
-            const msg = { s: currentUser, t: i.value, at: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
-            db.ref(`msgs/${currentChatRoom}`).push().set(msg);
-            db.ref(`recents/${currentUser}/${currentChatRoom}/last`).set(i.value);
-            i.value = ""; db.ref(`typing/${currentChatRoom}/${currentUser}`).remove();
+        function deleteMessage(id) {
+            if(confirm("Удалить сообщение?")) db.ref(`messages/${currentChatRoom}/${id}`).remove();
         }
 
-        async function uploadFile(i, type) {
-            const f = i.files[0]; if(!f) return;
-            const r = storage.ref(`uploads/${Date.now()}`); await r.put(f);
-            const url = await r.getDownloadURL();
-            db.ref(`msgs/${currentChatRoom}`).push().set({ s: currentUser, [type==='image'?'img':'v']: url, at: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
-        }
-
+        // --- ДОП. ФУНКЦИИ (СТАТУС, ЗВУК, ТИПИНГ) ---
         function handleTyping() {
             db.ref(`typing/${currentChatRoom}/${currentUser}`).set(true);
             clearTimeout(typingTimeout);
@@ -267,7 +286,15 @@
             });
         }
 
-        // ЗВОНКИ WEBRTC
+        function listenForGlobalNotifs() {
+            db.ref(`recents/${currentUser}`).on('child_changed', s => {
+                if(s.val().last && !currentChatRoom) {
+                    document.getElementById('notif-sound').play().catch(()=>{});
+                }
+            });
+        }
+
+        // --- WEBRTC ЗВОНКИ ---
         const rtcCfg = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
         async function startCall(v) {
             const target = currentRoomData.name; document.getElementById('call-screen').style.display='flex';
@@ -290,7 +317,6 @@
                     document.getElementById('local-video').srcObject = localStream;
                     pc = new RTCPeerConnection(rtcCfg);
                     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-                    pc.onicecandidate = e => e.candidate && db.ref(`calls/${d.from}/ice_ans`).set(JSON.stringify(e.candidate));
                     pc.ontrack = e => document.getElementById('remote-video').srcObject = e.streams[0];
                     await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(d.sdp)));
                     const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
@@ -300,6 +326,13 @@
         }
 
         function endCall() { if(pc) pc.close(); if(localStream) localStream.getTracks().forEach(t=>t.stop()); db.ref(`calls/${currentUser}`).remove(); document.getElementById('call-screen').style.display='none'; }
+
+        async function uploadFile(i, type) {
+            const f = i.files[0]; if(!f) return;
+            const r = storage.ref(`uploads/${Date.now()}`); await r.put(f);
+            const url = await r.getDownloadURL();
+            db.ref(`messages/${currentChatRoom}`).push().set({ s: currentUser, t: type==='image'?'📷 Фото':'🎤 Голос', [type==='image'?'img':'v']: url, at: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), timestamp: Date.now() });
+        }
 
         async function toggleMic() {
             if(!mediaRecorder || mediaRecorder.state==="inactive") {
