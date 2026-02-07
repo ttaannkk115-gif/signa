@@ -121,8 +121,7 @@
     const db = getDatabase(app);
     
     // НАСТРОЙКИ АДМИНА
-    const ADMIN_CODE = '6739218'; // Старый способ
-    const ADMIN_PASS = '1234';    // ПАРОЛЬ ДЛЯ ВХОДА
+    const ADMIN_PASS = '6739218';    // ПАРОЛЬ ДЛЯ ВХОДА
 
     let myName = localStorage.getItem('chat_user') || prompt("Ваше имя:") || "User" + Math.floor(Math.random()*100);
     localStorage.setItem('chat_user', myName);
