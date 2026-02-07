@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Clone Pro</title>
+    <title>WhatsApp Clone Pro + Sound</title>
     <style>
         :root {
             --primary: #00a884;
@@ -11,7 +11,6 @@
             --chat-bg: #efe7de;
             --my-msg: #dcf8c6;
             --others-msg: #ffffff;
-            --ticks: #53bdeb;
             --notify: #25d366;
         }
 
@@ -27,24 +26,14 @@
         #userList li { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         #userList li:hover { background: #f9f9f9; }
         
-        /* Уведомление (Бейдж) */
         .unread-badge {
-            background: var(--notify);
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            background: var(--notify); color: white; font-size: 11px; font-weight: bold;
+            min-width: 18px; height: 18px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center; padding: 2px;
         }
 
         /* Чат */
-        #chat-screen { width: 50%; height: 100%; background: var(--chat-bg); display: flex; flex-direction: column; position: relative; }
+        #chat-screen { width: 50%; height: 100%; background: var(--chat-bg); display: flex; flex-direction: column; }
         #messages { 
             flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; 
             background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
@@ -56,8 +45,7 @@
         .msg.my { align-self: flex-end; background: var(--my-msg); border-top-right-radius: 0; }
         .msg.others { align-self: flex-start; background: var(--others-msg); border-top-left-radius: 0; }
 
-        .msg-sender-link { color: var(--primary); font-weight: bold; font-size: 12px; cursor: pointer; margin-bottom: 3px; }
-        .msg-footer { align-self: flex-end; font-size: 10px; color: #667781; margin-top: 2px; display: flex; align-items: center; gap: 3px; }
+        .msg-footer { align-self: flex-end; font-size: 10px; color: #667781; margin-top: 2px; }
         
         .input-panel { background: #f0f2f5; padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
         .input-panel input { flex: 1; border: none; padding: 10px 15px; border-radius: 20px; outline: none; }
@@ -89,12 +77,13 @@
         </div>
         <div id="messages"></div>
         <div class="input-panel">
-            <label class="icon-btn">📎<input type="file" style="display:none" onchange="sendFile(this)"></label>
             <input type="text" id="msgInput" placeholder="Введите сообщение" onkeypress="if(event.key === 'Enter') sendMessage()">
             <button onclick="sendMessage()" class="icon-btn" style="color:var(--primary)">➤</button>
         </div>
     </div>
 </div>
+
+<audio id="notifSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -118,16 +107,25 @@
     document.getElementById('myIdDisplay').innerText = "Вы: " + myName;
 
     let recentUsers = JSON.parse(localStorage.getItem('recent_chats') || "[]");
-    let unreadCounts = {}; // Объект для хранения кол-ва непрочитанных
+    let currentChatId = null;
+    let isGlobal = false;
+    let lastMessageCount = 0;
 
-    // Статус онлайн
+    // Функция проигрывания звука
+    function playSound() {
+        const audio = document.getElementById('notifSound');
+        audio.currentTime = 0;
+        audio.play().catch(e => console.log("Нужно взаимодействие с сайтом для звука"));
+    }
+
     set(ref(db, 'status/' + myName), { online: true });
     onDisconnect(ref(db, 'status/' + myName)).set({ online: false });
 
-    // СЛУШАТЕЛЬ ВСЕХ СООБЩЕНИЙ (для уведомлений)
+    // Мгновенное отслеживание сообщений
     onValue(ref(db, 'private_messages'), (snap) => {
         const data = snap.val();
-        unreadCounts = {}; // Сбрасываем перед пересчетом
+        let totalUnread = 0;
+        let hasNew = false;
 
         for (let chatId in data) {
             if (chatId.includes(myName)) {
@@ -138,18 +136,22 @@
                 for (let mId in messages) {
                     if (messages[mId].sender !== myName && messages[mId].seen === false) {
                         count++;
+                        hasNew = true;
                     }
                 }
-                if (count > 0) {
-                    unreadCounts[otherUser] = count;
-                    // Если пользователя нет в списке недавних, добавляем его (чтобы он "выплыл")
-                    if (!recentUsers.includes(otherUser)) {
-                        recentUsers.unshift(otherUser);
-                        localStorage.setItem('recent_chats', JSON.stringify(recentUsers));
-                    }
+                if (count > 0 && !recentUsers.includes(otherUser)) {
+                    recentUsers.unshift(otherUser);
+                    localStorage.setItem('recent_chats', JSON.stringify(recentUsers));
                 }
+                totalUnread += count;
             }
         }
+
+        // Если количество непрочитанных увеличилось - играем звук
+        if (hasNew && totalUnread > lastMessageCount) {
+            playSound();
+        }
+        lastMessageCount = totalUnread;
         updateUI();
     });
 
@@ -160,62 +162,41 @@
     function renderList(st) {
         const list = document.getElementById('userList');
         list.innerHTML = `<li onclick="openChat('GLOBAL_CHAT', true)" style="background:#f0f7f4"><b>📢 Общий чат</b></li>`;
-
+        
         recentUsers.forEach(u => {
             const isOnline = st && st[u] && st[u].online;
-            const count = unreadCounts[u] || 0;
             const li = document.createElement('li');
             li.innerHTML = `
                 <div onclick="openChat('${u}', false)" style="flex:1">
-                    <b style="${count > 0 ? 'color:var(--primary)' : ''}">${u}</b><br>
-                    <small style="color:${isOnline ? 'var(--primary)' : '#888'}">${isOnline ? 'в сети' : 'оффлайн'}</small>
+                    <b>${u}</b><br>
+                    <small style="color:${isOnline ? 'var(--primary)' : '#888'}">${isOnline ? 'в сети' : 'был(а) недавно'}</small>
                 </div>
-                ${count > 0 ? `<div class="unread-badge">${count}</div>` : `<div style="font-size:20px; color:#ccc" onclick="removeContact('${u}')">×</div>`}
             `;
             list.appendChild(li);
         });
     }
 
-    window.removeContact = (u) => {
-        event.stopPropagation();
-        recentUsers = recentUsers.filter(item => item !== u);
-        localStorage.setItem('recent_chats', JSON.stringify(recentUsers));
-        updateUI();
-    };
-
-    let currentChatId = null;
-    let isGlobal = false;
-
     window.openChat = (target, global) => {
         isGlobal = global;
-        if (!isGlobal && !recentUsers.includes(target)) {
-            recentUsers.unshift(target);
-            localStorage.setItem('recent_chats', JSON.stringify(recentUsers));
-        }
-        
         currentChatId = isGlobal ? 'GLOBAL_CHAT' : [myName, target].sort().join("_");
         document.getElementById('chatTitle').innerText = isGlobal ? "📢 Общий чат" : target;
         document.body.classList.add('in-chat');
 
         const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
+        
+        // Firebase сам обновляет чат "в реальном времени" (каждую миллисекунду)
         onValue(ref(db, path), (snap) => {
             const box = document.getElementById('messages');
             box.innerHTML = "";
             snap.forEach((m) => {
                 const d = m.val();
-                const div = document.createElement('div');
-                div.className = `msg ${d.sender === myName ? 'my' : 'others'}`;
-                
-                // Помечаем как прочитанное при открытии
                 if (!isGlobal && d.sender !== myName && d.seen === false) {
                     update(ref(db, path + '/' + m.key), { seen: true });
                 }
-
+                const div = document.createElement('div');
+                div.className = `msg ${d.sender === myName ? 'my' : 'others'}`;
                 let time = d.ts ? new Date(d.ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "";
-                let sender = isGlobal && d.sender !== myName ? `<div class="msg-sender-link" onclick="openChat('${d.sender}', false)">${d.sender}</div>` : "";
-                
-                let content = d.file ? `<img src="${d.file}" style="max-width:200px">` : `<span>${d.text}</span>`;
-                div.innerHTML = `${sender}${content}<span class="msg-footer">${time}</span>`;
+                div.innerHTML = `<span>${d.text}</span><span class="msg-footer">${time}</span>`;
                 box.appendChild(div);
             });
             box.scrollTop = box.scrollHeight;
@@ -228,12 +209,6 @@
         const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
         push(ref(db, path), { sender: myName, text: inp.value, seen: false, ts: serverTimestamp() });
         inp.value = "";
-    };
-
-    window.searchUser = async () => {
-        const q = document.getElementById('searchInput').value.trim();
-        const s = await get(child(ref(db), `status/${q}`));
-        if (s.exists()) openChat(q, false); else alert("Пользователь не найден");
     };
 
     window.closeChat = () => document.body.classList.remove('in-chat');
