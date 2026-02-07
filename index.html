@@ -3,71 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Real-time Chat App</title>
+    <title>WhatsApp Clone Pro</title>
     <style>
         :root {
-            --primary: #0084ff;
+            --primary: #00a884;
             --bg: #f0f2f5;
-            --chat-bg: #e5ddd5;
+            --chat-bg: #efe7de;
             --my-msg: #dcf8c6;
+            --others-msg: #ffffff;
             --admin-color: #f39c12;
             --danger: #ff4757;
+            --ticks: #53bdeb;
         }
 
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); }
         #app-container { display: flex; width: 200%; height: 100%; transition: transform 0.3s ease; }
         body.in-chat #app-container { transform: translateX(-50%); }
 
-        /* Экраны */
+        /* Список контактов */
         #contact-screen { width: 50%; height: 100%; background: white; display: flex; flex-direction: column; }
-        #chat-screen { width: 50%; height: 100%; background: var(--chat-bg); display: flex; flex-direction: column; }
-
-        /* Хедер списка контактов */
-        .header { padding: 15px; border-bottom: 1px solid #ddd; background: #fff; }
-        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; }
-        .user-info { display: flex; align-items: center; gap: 8px; }
-        .login-link { color: var(--primary); cursor: pointer; text-decoration: underline; font-weight: bold; }
+        .header { padding: 15px; border-bottom: 1px solid #ddd; background: #f0f2f5; }
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .login-link { color: var(--primary); cursor: pointer; text-decoration: underline; font-size: 13px; font-weight: bold; }
         
-        .search-box { display: flex; gap: 5px; }
-        .search-box input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 10px; outline: none; }
-        .search-box button { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 12px; cursor: pointer; }
-
-        /* Список пользователей */
         #userList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        #userList li { padding: 15px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
-        .online-dot { width: 10px; height: 10px; background: #ccc; border-radius: 50%; }
-        .online-dot.active { background: #4caf50; }
-        .badge { background: var(--danger); color: white; font-size: 11px; min-width: 18px; height: 18px; border-radius: 10px; display: none; align-items: center; justify-content: center; margin-right: 8px; font-weight: bold; }
-        .typing-text { font-size: 11px; color: #4caf50; font-style: italic; display: none; margin-top: 2px; }
+        #userList li { padding: 15px; border-bottom: 1px solid #f5f5f5; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
 
-        /* Чат внутри */
-        .chat-header { background: white; padding: 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ddd; }
-        .header-left { display: flex; align-items: center; }
-        .back-btn { font-size: 24px; background: none; border: none; color: var(--primary); padding-right: 15px; cursor: pointer; }
-        .clear-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #999; }
+        /* Чат */
+        #chat-screen { width: 50%; height: 100%; background: var(--chat-bg); display: flex; flex-direction: column; }
+        #messages { 
+            flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; 
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-repeat: repeat;
+        }
 
-        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 16px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); position: relative; }
-        .msg.my { align-self: flex-end; background: var(--my-msg); border-bottom-right-radius: 2px; }
-        .msg.others { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
-        .msg-sender { font-size: 10px; color: #888; margin-bottom: 3px; font-weight: bold; }
-
-        /* Панель ввода */
-        .input-panel { background: white; padding: 10px; border-top: 1px solid #ddd; display: flex; gap: 8px; align-items: center; }
-        .input-panel input { flex: 1; border: 1px solid #ddd; padding: 12px; border-radius: 25px; outline: none; }
+        .chat-header { background: #f0f2f5; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ddd; }
         
-        .icon-btn { width: 45px; height: 45px; border-radius: 50%; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
-        .send-btn { background: var(--primary); }
-        .mic-btn { background: #34495e; }
-        .mic-btn.recording { background: var(--danger); animation: pulse 1.5s infinite; }
+        .msg { 
+            max-width: 85%; padding: 8px 10px 5px 10px; border-radius: 8px; font-size: 14.5px; 
+            box-shadow: 0 1px 1px rgba(0,0,0,0.15); position: relative; display: flex; flex-direction: column;
+        }
+        .msg.my { align-self: flex-end; background: var(--my-msg); border-top-right-radius: 0; }
+        .msg.others { align-self: flex-start; background: var(--others-msg); border-top-left-radius: 0; }
 
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        /* Ссылка на пользователя в общем чате */
+        .msg-sender-link { 
+            color: var(--primary); 
+            font-weight: bold; 
+            font-size: 12px; 
+            cursor: pointer; 
+            margin-bottom: 3px; 
+            display: inline-block;
+        }
+        .msg-sender-link:hover { text-decoration: underline; }
+
+        .voice-container { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+        .voice-avatar { width: 36px; height: 36px; border-radius: 50%; background: #dfe5e7; display: flex; align-items: center; justify-content: center; font-size: 20px; }
         
+        audio { height: 35px; width: 200px; filter: grayscale(1) opacity(0.7); }
+        .msg.my audio { filter: hue-rotate(90deg) saturate(2); }
+
+        .msg-footer { align-self: flex-end; font-size: 10px; color: #667781; margin-top: 2px; display: flex; align-items: center; gap: 3px; }
+        .ticks { font-size: 14px; line-height: 1; font-weight: bold; }
+        .ticks.seen { color: var(--ticks); }
+        .ticks.sent { color: #888; }
+
+        .input-panel { background: #f0f2f5; padding: 8px 12px; display: flex; gap: 10px; align-items: center; }
+        .input-panel input { flex: 1; border: none; padding: 10px 15px; border-radius: 20px; outline: none; font-size: 15px; }
+        
+        .icon-btn { border: none; background: none; cursor: pointer; font-size: 24px; color: #54656f; }
+        .send-btn { color: var(--primary); }
+        .mic-btn.recording { color: var(--danger); }
+
         @media (min-width: 768px) {
             #app-container { width: 100%; transform: none !important; }
             #contact-screen { width: 350px; border-right: 1px solid #ddd; }
             #chat-screen { width: calc(100% - 350px); }
-            .back-btn { display: none; }
         }
     </style>
 </head>
@@ -77,31 +88,24 @@
     <div id="contact-screen">
         <div class="header">
             <div class="top-row">
-                <div class="user-info">
-                    <span id="myIdDisplay" style="color: #999;"></span>
-                    <span id="loginBtn" class="login-link" onclick="adminLogin()">вход</span>
-                </div>
+                <div id="myIdDisplay" style="font-size: 14px; color: #54656f;"></div>
+                <span id="loginBtn" class="login-link" onclick="adminLogin()">вход</span>
             </div>
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Найти человека...">
-                <button onclick="searchUser()">🔍</button>
-            </div>
+            <input type="text" id="searchInput" placeholder="Поиск или новый чат..." style="width:100%; padding:8px; border-radius:20px; border:1px solid #ddd; outline:none;" onkeypress="if(event.key === 'Enter') searchUser()">
         </div>
         <ul id="userList"></ul>
     </div>
 
     <div id="chat-screen">
         <div class="chat-header">
-            <div class="header-left">
-                <button class="back-btn" onclick="closeChat()">❮</button>
-                <div id="chatTitle" style="font-weight: bold;"></div>
-            </div>
-            <button id="clearChatBtn" class="clear-btn" onclick="clearCurrentChat()" title="Очистить историю">🗑️</button>
+            <button onclick="closeChat()" style="background:none; border:none; font-size:20px; color:var(--primary); cursor:pointer;">❮</button>
+            <div id="chatTitle" style="font-weight:600; font-size: 16px;"></div>
+            <button id="clearChatBtn" style="background:none; border:none; font-size:18px; cursor:pointer;" onclick="clearCurrentChat()">🗑️</button>
         </div>
         <div id="messages"></div>
         <div class="input-panel">
-            <button id="micBtn" class="icon-btn mic-btn">🎤</button>
-            <input type="text" id="msgInput" placeholder="Сообщение..." oninput="handleTyping()" onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button id="micBtn" class="icon-btn">🎤</button>
+            <input type="text" id="msgInput" placeholder="Введите сообщение" onkeypress="if(event.key === 'Enter') sendMessage()">
             <button onclick="sendMessage()" class="icon-btn send-btn">➤</button>
         </div>
     </div>
@@ -124,186 +128,146 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // --- ЛОГИКА АДМИНА ---
     const ADMIN_PASS = '6739218';
-    let myName = localStorage.getItem('chat_user') || prompt("Введите ваше имя:") || "Гость" + Math.floor(Math.random()*100);
+    let myName = localStorage.getItem('chat_user') || prompt("Ваше имя:") || "Гость";
     localStorage.setItem('chat_user', myName);
+    let isAdmin = sessionStorage.getItem('is_admin_active') === 'true';
 
-    let isAdmin = localStorage.getItem('is_admin_active') === 'true';
-
-    function refreshAdminUI() {
-        const display = document.getElementById('myIdDisplay');
-        const loginBtn = document.getElementById('loginBtn');
-
-        if (isAdmin) {
-            display.innerHTML = `Вы: <b style="color:var(--admin-color)">Админ (${myName})</b>`;
-            loginBtn.style.display = 'none';
-        } else {
-            display.innerHTML = "Вы: " + myName;
-            loginBtn.style.display = 'inline';
-        }
+    function refreshUI() {
+        document.getElementById('myIdDisplay').innerHTML = isAdmin ? `<b style="color:var(--admin-color)">Админ (${myName})</b>` : "Вы: " + myName;
+        document.getElementById('loginBtn').style.display = isAdmin ? 'none' : 'inline';
     }
-    refreshAdminUI();
+    refreshUI();
 
     window.adminLogin = () => {
-        const pass = prompt("Введите пароль администратора:");
-        if (pass === ADMIN_PASS) {
-            localStorage.setItem('is_admin_active', 'true');
+        if (prompt("Пароль администратора:") === ADMIN_PASS) {
+            sessionStorage.setItem('is_admin_active', 'true');
             isAdmin = true;
-            refreshAdminUI();
-            alert("Вы вошли как администратор!");
             location.reload();
-        } else {
-            alert("Неверный пароль!");
         }
     };
 
-    // --- ОСНОВНОЙ ЧАТ ---
     const foundUsers = new Set(JSON.parse(localStorage.getItem('found_users') || "[]"));
-    const myStatusRef = ref(db, 'status/' + myName);
-    
-    set(myStatusRef, { online: true, typing: false, ts: serverTimestamp() });
-    onDisconnect(myStatusRef).set({ online: false, typing: false, ts: serverTimestamp() });
+    set(ref(db, 'status/' + myName), { online: true, ts: serverTimestamp() });
+    onDisconnect(ref(db, 'status/' + myName)).set({ online: false, ts: serverTimestamp() });
 
-    let currentChatId = null;
-    let targetUser = null; 
-    let isGlobal = false;
-    let mediaRecorder;
-    let audioChunks = [];
-    let typingTimeout;
-
-    window.handleTyping = () => {
-        set(ref(db, `status/${myName}/typing`), true);
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            set(ref(db, `status/${myName}/typing`), false);
-        }, 2000);
-    };
+    let currentChatId = null, isGlobal = false, mediaRecorder, audioChunks = [];
 
     const micBtn = document.getElementById('micBtn');
-    micBtn.addEventListener('click', async () => {
+    micBtn.onclick = async () => {
         if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = () => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(new Blob(audioChunks, { type: 'audio/webm' }));
-                    reader.onloadend = () => sendVoice(reader.result);
-                    stream.getTracks().forEach(t => t.stop());
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const reader = new FileReader();
+                reader.readAsDataURL(new Blob(audioChunks, { type: 'audio/webm' }));
+                reader.onloadend = () => {
+                    const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
+                    push(ref(db, path), { sender: myName, voice: reader.result, seen: false, ts: serverTimestamp() });
                 };
-                mediaRecorder.start();
-                micBtn.classList.add('recording');
-                micBtn.textContent = '⏹️';
-            } catch (err) { alert("Микрофон недоступен"); }
+            };
+            mediaRecorder.start();
+            micBtn.textContent = '🟢';
+            micBtn.classList.add('recording');
         } else {
             mediaRecorder.stop();
-            micBtn.classList.remove('recording');
             micBtn.textContent = '🎤';
+            micBtn.classList.remove('recording');
+        }
+    };
+
+    onValue(ref(db, 'status'), snap => {
+        const list = document.getElementById('userList');
+        list.innerHTML = `<li onclick="openChat('GLOBAL_CHAT', true)" style="background:#f0f7f4"><b>📢 Общий чат</b></li>`;
+        const st = snap.val() || {};
+        for (const u in st) {
+            if (u !== myName && (isAdmin || foundUsers.has(u))) {
+                const li = document.createElement('li');
+                li.innerHTML = `<div><b>${u}</b><br><small style="color:#888">${st[u].online ? 'в сети' : 'был(а) недавно'}</small></div>`;
+                li.onclick = () => openChat(u, false);
+                list.appendChild(li);
+            }
         }
     });
 
-    function sendVoice(base64) {
-        const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
-        push(ref(db, path), { sender: myName, voice: base64, ts: serverTimestamp() });
-    }
-
-    function renderUserList(statuses) {
-        const list = document.getElementById('userList');
-        list.innerHTML = `<li onclick="openChat('GLOBAL_CHAT', true)" style="background:#f8f7ff"><div>📢 Общий чат</div><div class="online-dot active"></div></li>`;
-        for (const user in statuses) {
-            if (user === myName) continue;
-            if (isAdmin || foundUsers.has(user)) {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <div>
-                        <div style="display:flex; align-items:center;">
-                            <span class="badge" id="badge-${user}">0</span>
-                            <span>${user}</span>
-                        </div>
-                        <div class="typing-text" id="typing-${user}">печатает...</div>
-                    </div>
-                    <div class="online-dot ${statuses[user].online ? 'active' : ''}"></div>`;
-                li.onclick = () => openChat(user, false);
-                list.appendChild(li);
-                if(document.getElementById(`typing-${user}`)) {
-                    document.getElementById(`typing-${user}`).style.display = statuses[user].typing ? 'block' : 'none';
-                }
-                watchUnread(user);
-            }
-        }
-    }
-
-    onValue(ref(db, 'status'), snap => renderUserList(snap.val() || {}));
-
-    window.searchUser = async () => {
-        const q = document.getElementById('searchInput').value.trim();
-        if (!q || q === myName) return;
-        const s = await get(child(ref(db), `status/${q}`));
-        if (s.exists()) {
-            foundUsers.add(q);
+    // Функция перехода в личку из общего чата
+    window.goToPrivateChat = (targetUser) => {
+        if (targetUser === myName) return;
+        // Добавляем пользователя в список найденных, если его там нет
+        if (!foundUsers.has(targetUser)) {
+            foundUsers.add(targetUser);
             localStorage.setItem('found_users', JSON.stringify([...foundUsers]));
-            openChat(q, false);
-        } else { alert("Пользователь не найден."); }
+        }
+        openChat(targetUser, false);
     };
 
     window.openChat = (target, global) => {
         isGlobal = global;
-        targetUser = global ? null : target;
         currentChatId = isGlobal ? 'GLOBAL_CHAT' : [myName, target].sort().join("_");
         document.getElementById('chatTitle').textContent = isGlobal ? "📢 Общий чат" : target;
         document.body.classList.add('in-chat');
-        document.getElementById('clearChatBtn').style.display = (isAdmin || !isGlobal) ? "block" : "none";
 
         const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
-        onValue(ref(db, path), (snapshot) => {
-            const msgBox = document.getElementById('messages');
-            msgBox.innerHTML = "";
-            snapshot.forEach((childSnap) => {
-                const data = childSnap.val();
+        onValue(ref(db, path), (snap) => {
+            const box = document.getElementById('messages');
+            box.innerHTML = "";
+            snap.forEach((m) => {
+                const d = m.val();
                 const div = document.createElement('div');
-                div.className = `msg ${data.sender === myName ? 'my' : 'others'}`;
-                let content = `<div class="msg-sender">${data.sender}</div>`;
-                content += data.voice ? `<audio controls src="${data.voice}"></audio>` : `<div>${data.text}</div>`;
-                div.innerHTML = content;
-                msgBox.appendChild(div);
-                if (!isGlobal && data.sender !== myName && !data.seen) {
-                    update(ref(db, path + '/' + childSnap.key), { seen: true });
+                div.className = `msg ${d.sender === myName ? 'my' : 'others'}`;
+                
+                if (!isGlobal && d.sender !== myName && !d.seen) {
+                    update(ref(db, path + '/' + m.key), { seen: true });
                 }
+
+                let time = d.ts ? new Date(d.ts).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
+                let ticks = (d.sender === myName && !isGlobal) ? `<span class="ticks ${d.seen ? 'seen' : 'sent'}">✓✓</span>` : "";
+
+                // Шаблон имени отправителя (только для общего чата и чужих сообщений)
+                let senderHtml = (isGlobal && d.sender !== myName) 
+                    ? `<span class="msg-sender-link" onclick="goToPrivateChat('${d.sender}')">${d.sender}</span>` 
+                    : "";
+
+                if (d.voice) {
+                    div.innerHTML = `
+                        ${senderHtml}
+                        <div class="voice-container"><div class="voice-avatar">👤</div><audio controls src="${d.voice}"></audio></div>
+                        <span class="msg-footer">${time} ${ticks}</span>`;
+                } else {
+                    div.innerHTML = `
+                        ${senderHtml}
+                        <span>${d.text}</span>
+                        <span class="msg-footer">${time} ${ticks}</span>`;
+                }
+                box.appendChild(div);
             });
-            msgBox.scrollTop = msgBox.scrollHeight;
+            box.scrollTop = box.scrollHeight;
         });
     };
 
     window.sendMessage = () => {
-        const val = document.getElementById('msgInput').value.trim();
-        if (!val) return;
-        set(ref(db, `status/${myName}/typing`), false);
-        const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
-        push(ref(db, path), { sender: myName, text: val, seen: false, ts: serverTimestamp() });
-        document.getElementById('msgInput').value = "";
-    };
-
-    window.clearCurrentChat = async () => {
-        if (confirm("Удалить сообщения в этом чате для всех?")) {
-            const path = isGlobal ? 'global_messages' : 'private_messages/' + currentChatId;
-            await remove(ref(db, path));
-        }
-    };
-
-    function watchUnread(sender) {
-        const chatId = [myName, sender].sort().join("_");
-        onValue(ref(db, 'private_messages/' + chatId), snap => {
-            let count = 0;
-            snap.forEach(m => { if(m.val().sender === sender && !m.val().seen) count++; });
-            const b = document.getElementById(`badge-${sender}`);
-            if(b) { b.textContent = count; b.style.display = count > 0 ? 'flex' : 'none'; }
+        const inp = document.getElementById('msgInput');
+        if (!inp.value.trim()) return;
+        push(ref(db, isGlobal ? 'global_messages' : 'private_messages/' + currentChatId), {
+            sender: myName, text: inp.value, seen: false, ts: serverTimestamp()
         });
-    }
+        inp.value = "";
+    };
 
-    window.closeChat = () => { targetUser = null; document.body.classList.remove('in-chat'); };
+    window.clearCurrentChat = () => { if(confirm("Очистить историю?")) remove(ref(db, isGlobal ? 'global_messages' : 'private_messages/' + currentChatId)); };
+    
+    window.searchUser = async () => {
+        const q = document.getElementById('searchInput').value.trim();
+        const s = await get(child(ref(db), `status/${q}`));
+        if (s.exists()) { 
+            foundUsers.add(q); 
+            localStorage.setItem('found_users', JSON.stringify([...foundUsers])); 
+            openChat(q, false); 
+        } else { alert("Пользователь не найден"); }
+    };
+    window.closeChat = () => document.body.classList.remove('in-chat');
 </script>
 </body>
 </html>
