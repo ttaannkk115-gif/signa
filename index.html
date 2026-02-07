@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Clone Pro</title>
+    <title>WhatsApp Clone Pro + Admin</title>
     <style>
         :root {
             --primary: #00a884;
@@ -14,6 +14,7 @@
             --ticks-blue: #53bdeb;
             --ticks-gray: #8696a0;
             --notify: #25d366;
+            --admin-gold: #f39c12;
         }
 
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; background: var(--bg); }
@@ -23,6 +24,9 @@
         /* Sidebar */
         #contact-screen { width: 50%; height: 100%; background: white; display: flex; flex-direction: column; }
         .header { padding: 15px; border-bottom: 1px solid #ddd; background: #f0f2f5; }
+        .user-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .admin-login-btn { color: var(--primary); cursor: pointer; font-size: 13px; font-weight: bold; text-decoration: underline; }
+        
         #userList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
         #userList li { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         #userList li:hover { background: #f9f9f9; }
@@ -43,8 +47,6 @@
         .msg-footer { align-self: flex-end; font-size: 10px; color: #667781; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
         .ticks { font-size: 14px; font-weight: bold; line-height: 1; }
         
-        /* Input Panel */
-        #upload-status { position: absolute; bottom: 60px; left:0; right:0; background: var(--primary); color: white; text-align: center; padding: 5px; font-size: 12px; display: none; }
         .input-panel { background: #f0f2f5; padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
         .input-panel input { flex: 1; border: none; padding: 10px 15px; border-radius: 20px; outline: none; }
         .icon-btn { border: none; background: none; cursor: pointer; font-size: 22px; color: #54656f; }
@@ -57,7 +59,10 @@
 <div id="app-container">
     <div id="contact-screen">
         <div class="header">
-            <div id="myIdDisplay" style="margin-bottom:10px; font-size: 14px; color: #54656f;"></div>
+            <div class="user-info-row">
+                <div id="myIdDisplay" style="font-size: 14px; color: #54656f;"></div>
+                <div class="admin-login-btn" onclick="tryAdminLogin()">вход</div>
+            </div>
             <input type="text" id="searchInput" placeholder="Поиск пользователя..." style="width:100%; padding:10px; border-radius:20px; border:1px solid #ddd; outline:none;" onkeypress="if(event.key === 'Enter') searchUser()">
         </div>
         <ul id="userList"></ul>
@@ -65,15 +70,13 @@
 
     <div id="chat-screen">
         <div class="chat-header">
-            <button onclick="closeChat()" style="background:none; border:none; font-size:20px; color:var(--primary);">❮</button>
+            <button onclick="closeChat()" style="background:none; border:none; font-size:20px; color:var(--primary); cursor:pointer;">❮</button>
             <div id="chatTitle" style="font-weight:600;"></div>
             <button style="background:none; border:none; font-size:18px;" onclick="clearCurrentChat()">🗑️</button>
         </div>
         <div id="messages"></div>
-        <div id="upload-status">Отправка файла...</div>
         <div class="input-panel">
             <label class="icon-btn">📎<input type="file" id="fInp" style="display:none" onchange="sendFile(this)"></label>
-            <button id="micBtn" class="icon-btn">🎤</button>
             <input type="text" id="msgInput" placeholder="Введите сообщение" onkeypress="if(event.key === 'Enter') sendMessage()">
             <button onclick="sendMessage()" class="icon-btn" style="color:var(--primary)">➤</button>
         </div>
@@ -99,21 +102,36 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    const ADMIN_PASS = '6739218';
+    let isAdmin = false;
     let myName = localStorage.getItem('chat_user') || prompt("Ваше имя:") || "Гость";
     localStorage.setItem('chat_user', myName);
-    document.getElementById('myIdDisplay').innerText = "Вы: " + myName;
+    
+    function updateHeader() {
+        const display = document.getElementById('myIdDisplay');
+        display.innerHTML = isAdmin ? `<b style="color:var(--admin-gold)">Админ: ${myName}</b>` : `Вы: ${myName}`;
+    }
+    updateHeader();
+
+    window.tryAdminLogin = () => {
+        const pass = prompt("Введите пароль администратора:");
+        if (pass === ADMIN_PASS) {
+            isAdmin = true;
+            updateHeader();
+            alert("Вход выполнен! Теперь вы видите всех пользователей.");
+            updateList();
+        } else {
+            alert("Неверный пароль!");
+        }
+    };
 
     let recentUsers = JSON.parse(localStorage.getItem('recent_chats') || "[]");
     let unreadCounts = {};
     let currentChatId = null, isGlobal = false, lastTotalUnread = 0;
 
-    // Статус и звук
     set(ref(db, 'status/' + myName), { online: true });
     onDisconnect(ref(db, 'status/' + myName)).set({ online: false });
 
-    function playNotif() { document.getElementById('notifSound').play().catch(()=>{}); }
-
-    // Главный слушатель входящих
     onValue(ref(db, 'private_messages'), (snap) => {
         const data = snap.val();
         let total = 0;
@@ -128,7 +146,6 @@
                     const m = msgs[mId];
                     if (m.sender !== myName && m.status !== 'read') {
                         count++;
-                        // Если получатель онлайн, ставим "delivered"
                         if (m.status === 'sent') update(ref(db, `private_messages/${cId}/${mId}`), { status: 'delivered' });
                     }
                 }
@@ -139,7 +156,7 @@
                 total += count;
             }
         }
-        if (total > lastTotalUnread) playNotif();
+        if (total > lastTotalUnread) document.getElementById('notifSound').play().catch(()=>{});
         lastTotalUnread = total;
         updateList();
     });
@@ -149,16 +166,27 @@
     function renderList(st) {
         const list = document.getElementById('userList');
         list.innerHTML = `<li onclick="openChat('GLOBAL_CHAT', true)" style="background:#f0f7f4"><b>📢 Общий чат</b></li>`;
-        recentUsers.forEach(u => {
+        
+        // Если админ - показываем вообще всех, кто есть в базе 'status'
+        let displayList = isAdmin ? Object.keys(st || {}) : recentUsers;
+
+        displayList.forEach(u => {
+            if (u === myName && isAdmin) return; 
             const count = unreadCounts[u] || 0;
+            const isOnline = st && st[u]?.online;
             const li = document.createElement('li');
-            li.innerHTML = `<div onclick="openChat('${u}', false)" style="flex:1"><b>${u}</b><br><small>${st && st[u]?.online ? 'в сети' : 'оффлайн'}</small></div>
+            li.innerHTML = `<div onclick="openChat('${u}', false)" style="flex:1"><b>${u}</b><br><small>${isOnline ? 'в сети' : 'оффлайн'}</small></div>
             ${count > 0 ? `<div class="unread-badge">${count}</div>` : `<div style="color:#ccc" onclick="removeRecent('${u}')">×</div>`}`;
             list.appendChild(li);
         });
     }
 
-    window.removeRecent = (u) => { event.stopPropagation(); recentUsers = recentUsers.filter(x => x!==u); localStorage.setItem('recent_chats', JSON.stringify(recentUsers)); updateList(); };
+    window.removeRecent = (u) => { 
+        event.stopPropagation(); 
+        recentUsers = recentUsers.filter(x => x!==u); 
+        localStorage.setItem('recent_chats', JSON.stringify(recentUsers)); 
+        updateList(); 
+    };
 
     window.openChat = (target, global) => {
         isGlobal = global;
@@ -179,9 +207,7 @@
                 div.className = `msg ${d.sender === myName ? 'my' : 'others'}`;
                 let ticks = "";
                 if (d.sender === myName && !isGlobal) {
-                    if (d.status === 'read') ticks = `<span class="ticks" style="color:var(--ticks-blue)">✓✓</span>`;
-                    else if (d.status === 'delivered') ticks = `<span class="ticks" style="color:var(--ticks-gray)">✓✓</span>`;
-                    else ticks = `<span class="ticks" style="color:var(--ticks-gray)">✓</span>`;
+                    ticks = `<span class="ticks" style="color:${d.status === 'read' ? 'var(--ticks-blue)' : 'var(--ticks-gray)'}">${d.status === 'read' || d.status === 'delivered' ? '✓✓' : '✓'}</span>`;
                 }
                 let sender = isGlobal && d.sender !== myName ? `<div class="msg-sender-link" onclick="openChat('${d.sender}', false)">${d.sender}</div>` : "";
                 let content = d.file ? `<img src="${d.file}" style="max-width:200px">` : `<span>${d.text}</span>`;
@@ -204,13 +230,12 @@
     window.sendFile = (inp) => {
         const file = inp.files[0];
         if (file && file.size <= 1048576) {
-            document.getElementById('upload-status').style.display = 'block';
             const r = new FileReader();
             r.readAsDataURL(file);
             r.onload = () => {
                 push(ref(db, isGlobal ? 'global_messages' : 'private_messages/' + currentChatId), {
                     sender: myName, file: r.result, status: 'sent', ts: serverTimestamp()
-                }).then(() => document.getElementById('upload-status').style.display = 'none');
+                });
             };
         } else alert("Макс 1МБ");
     };
